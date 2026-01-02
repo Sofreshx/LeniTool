@@ -1,0 +1,20 @@
+{
+  "maxChunkSizeMB": 4.5,
+  "segmentationTags": [
+    "<section",
+    "<div class=\"page\"",
+    "<div",
+    "<article"
+  ],
+  "closingTags": [
+    "</body>",
+    "</html>"
+  ],
+  "openingTags": [
+    "<html>",
+    "<body>"
+  ],
+  "namingPattern": "{filename}_part{number}.html",
+  "outputDirectory": "output",
+  "maxParallelFiles": 4
+}

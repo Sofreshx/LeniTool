@@ -1,0 +1,73 @@
+# Example input file for segmentation tests
+# Each block that must be preserved is wrapped in a <Folder/> tag.
+# The file ends with a single <End/> tag (self-closed) to mark termination.
+
+<Meta>
+  Title: Example Preserve Folders
+  Created: 2026-01-02
+</Meta>
+
+<Header>
+  This is an example document for verifying that elements wrapped in <Folder/> are preserved as atomic segments during splitting.
+</Header>
+
+# The following is a simple paragraph that may be split normally.
+Paragraph 1: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio.
+
+# A Folder block representing a file with metadata that should be kept intact
+<Folder id="file-001" type="document">
+--- BEGIN FOLDER CONTENT ---
+Filename: report-2025.pdf
+Size: 1.2MB
+Checksum: abc123def456
+ContentPreview:
+  Page 1: Executive Summary
+  Page 2: Financials
+  Page 3: Appendix
+--- END FOLDER CONTENT ---
+</Folder>
+
+# Some more text that may be split across segments
+Paragraph 2: Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+# A Folder block that contains nested items which also must be preserved together
+<Folder id="images-collection" type="images">
+--- BEGIN FOLDER CONTENT ---
+ImageList:
+  - img001.jpg (800x600)
+  - img002.png (1024x768)
+  - img003.gif (animated)
+Notes: These images belong to campaign "Fall 2025" and should not be separated.
+--- END FOLDER CONTENT ---
+</Folder>
+
+# A Folder block that contains a chunk of HTML/markup that must stay intact
+<Folder id="html-snippet" type="html">
+--- BEGIN FOLDER CONTENT ---
+<div class="card">
+  <h3>Title</h3>
+  <p>Some inner HTML content that includes <strong>bold</strong> and <a href="#">links</a>.</p>
+  <ul>
+    <li>Item one</li>
+    <li>Item two</li>
+  </ul>
+</div>
+--- END FOLDER CONTENT ---
+</Folder>
+
+# A Folder block with JSON payload
+<Folder id="json-payload" type="json">
+--- BEGIN FOLDER CONTENT ---
+{
+  "user": "alice",
+  "roles": ["admin", "editor"],
+  "prefs": { "theme": "dark", "notifications": true }
+}
+--- END FOLDER CONTENT ---
+</Folder>
+
+# Trailing paragraph
+Paragraph 3: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+# End marker as requested
+<End/>
