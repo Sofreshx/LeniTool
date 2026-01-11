@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
         x:Class="LeniTool.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Title="LeniTool - HTML Splitter"
+    Title="LeniTool"
         Width="900" Height="700">
 
     <ScrollViewer>
@@ -108,23 +108,103 @@
 
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button Content="Add Files"
-                                Command="{Binding AddFilesCommand}"/>
+                                Click="OnAddFilesClicked"/>
                         <Button Content="Clear All"
                                 Command="{Binding ClearFilesCommand}"/>
                     </StackPanel>
 
-                    <!-- File List -->
-                    <ListBox ItemsSource="{Binding Files}"
-                             Height="150">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Spacing="5">
-                                    <TextBlock Text="{Binding FileName}" FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding Status}" FontSize="12" Foreground="Gray"/>
+                    <Grid ColumnDefinitions="*,320">
+                        <!-- File List + Drop Target -->
+                        <Border Grid.Column="0" BorderBrush="#E6E6E6" BorderThickness="1" CornerRadius="6" Padding="8">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="Drag files here" Foreground="Gray" FontSize="12"/>
+                                <ListBox ItemsSource="{Binding Files}"
+                                         x:Name="FilesList"
+                                         SelectedItem="{Binding SelectedFile}"
+                                         DragDrop.AllowDrop="True"
+                                         Height="200">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{Binding FileName}" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding Status}" FontSize="12" Foreground="Gray"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Analysis + Overrides Panel -->
+                        <Border Grid.Column="1" BorderBrush="#E6E6E6" BorderThickness="1" CornerRadius="6" Padding="10" Margin="15,0,0,0">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Analysis &amp; Overrides" FontWeight="Bold" FontSize="16"/>
+
+                                    <StackPanel Spacing="6" IsVisible="{Binding HasSelectedFile}">
+                                        <TextBlock Text="{Binding SelectedFile.FileName}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding SelectedFile.FilePath}" FontSize="11" Foreground="Gray" TextWrapping="Wrap"/>
+
+                                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Size:" FontWeight="Bold"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedFile.FileSizeDisplay}" Margin="8,0,0,4"/>
+
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Encoding:" FontWeight="Bold"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedFile.EncodingDisplay}" Margin="8,0,0,4"/>
+
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Target:" FontWeight="Bold"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedFile.OverrideMaxChunkSizeMB, StringFormat='{}{0:F1} MB'}" Margin="8,0,0,4"/>
+
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Est. parts:" FontWeight="Bold"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedFile.EstimatedPartCount}" Margin="8,0,0,0"/>
+                                        </Grid>
+
+                                        <TextBlock Text="Candidates" FontWeight="Bold" Margin="0,6,0,0"/>
+                                        <ItemsControl ItemsSource="{Binding SelectedFile.CandidateRecords}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,6">
+                                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding TagName}" FontWeight="Bold"/>
+                                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Confidence, StringFormat='{}{0:P0}'}" Foreground="Gray"/>
+                                                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                                                   Text="{Binding CountEstimate, StringFormat='Count: {0}'}" FontSize="11" Foreground="Gray"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <Separator/>
+
+                                        <TextBlock Text="Override" FontWeight="Bold"/>
+                                        <ToggleSwitch Content="Auto-detect record tag"
+                                                     IsChecked="{Binding SelectedFile.OverrideAutoDetectRecordTag}"/>
+                                        <TextBlock Text="Record tag (manual)" FontSize="12" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding SelectedFile.OverrideRecordTagName}"
+                                                 IsEnabled="{Binding SelectedFile.IsManualRecordTag}"/>
+
+                                        <TextBlock Text="Target size (MB)" FontSize="12" FontWeight="Bold"/>
+                                        <NumericUpDown Value="{Binding SelectedFile.OverrideMaxChunkSizeMB}"
+                                                       Minimum="0.5"
+                                                       Maximum="100"
+                                                       Increment="0.5"/>
+
+                                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+                                            <Button Content="Re-analyze"
+                                                    Command="{Binding AnalyzeSelectedFileCommand}"/>
+                                            <Button Content="Save for this file"
+                                                    Command="{Binding SaveSelectedFileOverrideCommand}"/>
+                                        </StackPanel>
+
+                                        <Button Content="Save as extension default"
+                                                Command="{Binding SaveSelectedExtensionOverrideCommand}"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="Select a file to see details." Foreground="Gray" FontSize="12"
+                                               IsVisible="{Binding HasNoSelectedFile}"/>
                                 </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
                 </StackPanel>
             </Border>
 

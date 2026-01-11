@@ -9,12 +9,17 @@ namespace LeniTool.Core.Services;
 public class FileProcessingService
 {
     private readonly SplitConfiguration _config;
-    private readonly HtmlSplitterService _splitterService;
+    private readonly SplitterStrategyRegistry _registry;
 
     public FileProcessingService(SplitConfiguration config)
+        : this(config, CreateDefaultRegistry(config))
+    {
+    }
+
+    public FileProcessingService(SplitConfiguration config, SplitterStrategyRegistry registry)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
-        _splitterService = new HtmlSplitterService(config);
+        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
     }
 
     /// <summary>
@@ -94,13 +99,20 @@ public class FileProcessingService
             var fileInfo = new FileInfo(filePath);
             result.OriginalSizeBytes = fileInfo.Length;
 
+            if (!_registry.TryGetByFilePath(filePath, out var strategy) || strategy is null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Unsupported file type: {fileInfo.Extension}";
+                return result;
+            }
+
             progress?.Report(new ProcessingProgress
             {
                 FileName = fileInfo.Name,
                 Status = "Starting split operation..."
             });
 
-            var outputFiles = await _splitterService.SplitFileAsync(filePath, outputDirectory, progress, cancellationToken);
+            var outputFiles = await strategy.SplitFileAsync(filePath, outputDirectory, progress, cancellationToken);
             
             result.OutputFiles = outputFiles;
             result.Success = true;
@@ -151,12 +163,20 @@ public class FileProcessingService
             }
 
             var extension = Path.GetExtension(filePath).ToLowerInvariant();
-            if (extension != ".html" && extension != ".htm")
+            if (!_registry.SupportsExtension(extension))
             {
-                errors.Add($"Not an HTML file: {filePath}");
+                errors.Add($"Unsupported file type: {filePath}");
             }
         }
 
         return (errors.Count == 0, errors);
+    }
+
+    private static SplitterStrategyRegistry CreateDefaultRegistry(SplitConfiguration config)
+    {
+        var registry = new SplitterStrategyRegistry();
+        registry.Register(new HtmlSplitterService(config));
+        registry.Register(new TxtMarkupSplitterService(config));
+        return registry;
     }
 }

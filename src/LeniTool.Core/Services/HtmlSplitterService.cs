@@ -6,13 +6,30 @@ namespace LeniTool.Core.Services;
 /// <summary>
 /// Core service for splitting HTML files into chunks
 /// </summary>
-public class HtmlSplitterService
+public class HtmlSplitterService : ISplitterStrategy
 {
     private readonly SplitConfiguration _config;
+    private static readonly IReadOnlyCollection<string> Extensions = new[] { ".html", ".htm" };
 
     public HtmlSplitterService(SplitConfiguration config)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
+    }
+
+    public IReadOnlyCollection<string> SupportedExtensions => Extensions;
+
+    public Task<AnalysisResult> AnalyzeAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fileInfo = new FileInfo(filePath);
+        return Task.FromResult(new AnalysisResult
+        {
+            FilePath = filePath,
+            Extension = fileInfo.Extension,
+            FileSizeBytes = fileInfo.Exists ? fileInfo.Length : 0,
+            StrategyName = nameof(HtmlSplitterService)
+        });
     }
 
     /// <summary>

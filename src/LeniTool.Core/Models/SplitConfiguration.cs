@@ -1,7 +1,9 @@
 namespace LeniTool.Core.Models;
 
 /// <summary>
-/// Configuration for HTML file splitting
+/// Configuration for file splitting.
+/// Historically this was HTML-only; it now also supports per-extension and per-file overrides
+/// (used by the .txt markup splitter) while keeping backwards-compatible JSON.
 /// </summary>
 public class SplitConfiguration
 {
@@ -55,9 +57,90 @@ public class SplitConfiguration
     public int MaxParallelFiles { get; set; } = 4;
 
     /// <summary>
+    /// Optional preferred record tag for markup-based splitters (e.g. .txt pseudo-XML).
+    /// When null/empty and <see cref="AutoDetectRecordTag"/> is true, the splitter will auto-detect.
+    /// </summary>
+    public string? RecordTagName { get; set; }
+
+    /// <summary>
+    /// When true, splitters may auto-detect record tags if <see cref="RecordTagName"/> is not set.
+    /// This provides an explicit "auto-detect" vs "manual" flag for the UI.
+    /// </summary>
+    public bool AutoDetectRecordTag { get; set; } = true;
+
+    /// <summary>
+    /// Per-extension profiles (e.g. ".txt" defaults). Values here override global defaults.
+    /// </summary>
+    public Dictionary<string, SplitConfigurationOverrides>? ExtensionProfiles { get; set; }
+
+    /// <summary>
+    /// Persisted per-file overrides. Values here override extension profiles and global defaults.
+    /// Keys should be full file paths.
+    /// </summary>
+    public Dictionary<string, SplitConfigurationOverrides>? FileOverrides { get; set; }
+
+    /// <summary>
+    /// Transient per-run overrides (not persisted). Highest precedence.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public SplitRunOverrides RunOverrides { get; set; } = new();
+
+    /// <summary>
     /// Gets the maximum chunk size in bytes
     /// </summary>
     public long MaxChunkSizeBytes => (long)(MaxChunkSizeMB * 1024 * 1024);
+
+    /// <summary>
+    /// Resolves an effective configuration for a specific file.
+    /// Precedence: transient override &gt; persisted file override &gt; extension profile &gt; global defaults.
+    /// </summary>
+    public SplitConfiguration ResolveForFile(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            throw new ArgumentException("File path is required.", nameof(filePath));
+
+        var resolved = new SplitConfiguration
+        {
+            MaxChunkSizeMB = MaxChunkSizeMB,
+            SegmentationTags = new List<string>(SegmentationTags ?? new List<string>()),
+            ClosingTags = new List<string>(ClosingTags ?? new List<string>()),
+            OpeningTags = new List<string>(OpeningTags ?? new List<string>()),
+            NamingPattern = NamingPattern,
+            OutputDirectory = OutputDirectory,
+            MaxParallelFiles = MaxParallelFiles,
+            RecordTagName = RecordTagName,
+            AutoDetectRecordTag = AutoDetectRecordTag
+        };
+
+        var extensionKey = NormalizeExtension(Path.GetExtension(filePath));
+        if (!string.IsNullOrEmpty(extensionKey) && ExtensionProfiles is not null)
+        {
+            if (TryGetByExtensionKey(ExtensionProfiles, extensionKey, out var profileOverrides))
+                ApplyOverrides(resolved, profileOverrides);
+        }
+
+        var fullPathKey = NormalizeFileKey(filePath);
+        if (FileOverrides is not null)
+        {
+            if (FileOverrides.TryGetValue(fullPathKey, out var fileOverrides))
+                ApplyOverrides(resolved, fileOverrides);
+            else if (FileOverrides.TryGetValue(filePath, out var fileOverrides2))
+                ApplyOverrides(resolved, fileOverrides2);
+        }
+
+        // Transient overrides (run-level), highest precedence.
+        ApplyOverrides(resolved, RunOverrides.GlobalOverride);
+
+        if (RunOverrides.FileOverrides is not null)
+        {
+            if (RunOverrides.FileOverrides.TryGetValue(fullPathKey, out var runFileOverrides))
+                ApplyOverrides(resolved, runFileOverrides);
+            else if (RunOverrides.FileOverrides.TryGetValue(filePath, out var runFileOverrides2))
+                ApplyOverrides(resolved, runFileOverrides2);
+        }
+
+        return resolved;
+    }
 
     /// <summary>
     /// Validates the configuration
@@ -108,5 +191,88 @@ public class SplitConfiguration
 
         errorMessage = string.Empty;
         return true;
+    }
+
+    private static void ApplyOverrides(SplitConfiguration target, SplitConfigurationOverrides? overrides)
+    {
+        if (target is null)
+            throw new ArgumentNullException(nameof(target));
+
+        if (overrides is null)
+            return;
+
+        if (overrides.MaxChunkSizeMB.HasValue)
+            target.MaxChunkSizeMB = overrides.MaxChunkSizeMB.Value;
+
+        if (overrides.SegmentationTags is not null)
+            target.SegmentationTags = new List<string>(overrides.SegmentationTags);
+
+        if (overrides.ClosingTags is not null)
+            target.ClosingTags = new List<string>(overrides.ClosingTags);
+
+        if (overrides.OpeningTags is not null)
+            target.OpeningTags = new List<string>(overrides.OpeningTags);
+
+        if (overrides.NamingPattern is not null)
+            target.NamingPattern = overrides.NamingPattern;
+
+        if (overrides.OutputDirectory is not null)
+            target.OutputDirectory = overrides.OutputDirectory;
+
+        if (overrides.MaxParallelFiles.HasValue)
+            target.MaxParallelFiles = overrides.MaxParallelFiles.Value;
+
+        if (overrides.RecordTagName is not null)
+            target.RecordTagName = overrides.RecordTagName;
+
+        if (overrides.AutoDetectRecordTag.HasValue)
+            target.AutoDetectRecordTag = overrides.AutoDetectRecordTag.Value;
+    }
+
+    private static string NormalizeExtension(string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension))
+            return string.Empty;
+
+        var ext = extension.Trim().ToLowerInvariant();
+        if (!ext.StartsWith('.'))
+            ext = "." + ext;
+
+        return ext;
+    }
+
+    private static string NormalizeFileKey(string filePath)
+    {
+        try
+        {
+            return Path.GetFullPath(filePath);
+        }
+        catch
+        {
+            return filePath;
+        }
+    }
+
+    private static bool TryGetByExtensionKey(
+        Dictionary<string, SplitConfigurationOverrides> dict,
+        string extensionKey,
+        out SplitConfigurationOverrides? overrides)
+    {
+        if (dict.TryGetValue(extensionKey, out var exact))
+        {
+            overrides = exact;
+            return true;
+        }
+
+        // Allow users to store keys without a leading dot.
+        var noDot = extensionKey.StartsWith('.') ? extensionKey[1..] : extensionKey;
+        if (!string.IsNullOrEmpty(noDot) && dict.TryGetValue(noDot, out var alt))
+        {
+            overrides = alt;
+            return true;
+        }
+
+        overrides = null;
+        return false;
     }
 }
