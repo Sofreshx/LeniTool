@@ -1,0 +1,147 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F1115" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#171A21" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#2A2F3A" />
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E7EAF0" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#A9B1C1" />
+    <SolidColorBrush x:Key="TextSubtleBrush" Color="#7D8598" />
+
+    <SolidColorBrush x:Key="AccentBrush" Color="#7C5CFF" />
+    <SolidColorBrush x:Key="AccentBrushSoft" Color="#2C244A" />
+
+    <SolidColorBrush x:Key="BadgeNeutralBg" Color="#242A35" />
+    <SolidColorBrush x:Key="BadgeNeutralFg" Color="#D8DEE9" />
+    <SolidColorBrush x:Key="BadgeSuccessBg" Color="#173426" />
+    <SolidColorBrush x:Key="BadgeSuccessFg" Color="#B7F3D0" />
+    <SolidColorBrush x:Key="BadgeWarningBg" Color="#3A2D12" />
+    <SolidColorBrush x:Key="BadgeWarningFg" Color="#FFD89A" />
+    <SolidColorBrush x:Key="BadgeDangerBg" Color="#3A1820" />
+    <SolidColorBrush x:Key="BadgeDangerFg" Color="#FFC0CB" />
+
+    <SolidColorBrush x:Key="ListHeaderBg" Color="#12151B" />
+    <SolidColorBrush x:Key="ListRowHoverBg" Color="#1D2230" />
+    <SolidColorBrush x:Key="ListRowSelectedBg" Color="#2A2550" />
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.subtle">
+    <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+  </Style>
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="14" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12,9" />
+  </Style>
+
+  <Style Selector="Border.badge">
+    <Setter Property="Background" Value="{DynamicResource BadgeNeutralBg}" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="10,4" />
+  </Style>
+
+  <Style Selector="Border.badge > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource BadgeNeutralFg}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Border.badge.success">
+    <Setter Property="Background" Value="{DynamicResource BadgeSuccessBg}" />
+  </Style>
+
+  <Style Selector="Border.badge.success > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource BadgeSuccessFg}" />
+  </Style>
+
+  <Style Selector="Border.badge.warning">
+    <Setter Property="Background" Value="{DynamicResource BadgeWarningBg}" />
+  </Style>
+
+  <Style Selector="Border.badge.warning > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource BadgeWarningFg}" />
+  </Style>
+
+  <Style Selector="Border.badge.danger">
+    <Setter Property="Background" Value="{DynamicResource BadgeDangerBg}" />
+  </Style>
+
+  <Style Selector="Border.badge.danger > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource BadgeDangerFg}" />
+  </Style>
+
+  <Style Selector="Border.listHeader">
+    <Setter Property="Background" Value="{DynamicResource ListHeaderBg}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+
+  <Style Selector="ListBox.filesList">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.filesList ListBoxItem">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0,2" />
+  </Style>
+
+  <Style Selector="ListBox.filesList ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ListRowHoverBg}" />
+  </Style>
+
+  <Style Selector="ListBox.filesList ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ListRowSelectedBg}" />
+  </Style>
+
+  <Style Selector="ListBox.filesList ListBoxItem /template/ ContentPresenter">
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="10,8" />
+  </Style>
+
+</Styles>

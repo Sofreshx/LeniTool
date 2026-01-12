@@ -13,6 +13,19 @@ public class SplitConfiguration
     public double MaxChunkSizeMB { get; set; } = 4.5;
 
     /// <summary>
+    /// Hard maximum allowed input file size in megabytes.
+    /// When set to 0, the limit is treated as disabled.
+    /// </summary>
+    public double MaxInputFileSize { get; set; } = 5 * 1024;
+
+    /// <summary>
+    /// Auto-analyze threshold in megabytes.
+    /// Files larger than this value will be added but not automatically analyzed.
+    /// When set to 0, auto-analysis is disabled.
+    /// </summary>
+    public double AutoAnalyzeThreshold { get; set; } = 100;
+
+    /// <summary>
     /// HTML tags to use as split points (in order of priority)
     /// </summary>
     public List<string> SegmentationTags { get; set; } = new()
@@ -91,6 +104,16 @@ public class SplitConfiguration
     public long MaxChunkSizeBytes => (long)(MaxChunkSizeMB * 1024 * 1024);
 
     /// <summary>
+    /// Gets the maximum allowed input file size in bytes.
+    /// </summary>
+    public long MaxInputFileSizeBytes => (long)(MaxInputFileSize * 1024 * 1024);
+
+    /// <summary>
+    /// Gets the auto-analyze threshold in bytes.
+    /// </summary>
+    public long AutoAnalyzeThresholdBytes => (long)(AutoAnalyzeThreshold * 1024 * 1024);
+
+    /// <summary>
     /// Resolves an effective configuration for a specific file.
     /// Precedence: transient override &gt; persisted file override &gt; extension profile &gt; global defaults.
     /// </summary>
@@ -102,6 +125,8 @@ public class SplitConfiguration
         var resolved = new SplitConfiguration
         {
             MaxChunkSizeMB = MaxChunkSizeMB,
+            MaxInputFileSize = MaxInputFileSize,
+            AutoAnalyzeThreshold = AutoAnalyzeThreshold,
             SegmentationTags = new List<string>(SegmentationTags ?? new List<string>()),
             ClosingTags = new List<string>(ClosingTags ?? new List<string>()),
             OpeningTags = new List<string>(OpeningTags ?? new List<string>()),
@@ -156,6 +181,38 @@ public class SplitConfiguration
         if (MaxChunkSizeMB > 100)
         {
             errorMessage = "Max chunk size must be 100 MB or less";
+            return false;
+        }
+
+        if (MaxInputFileSize < 0)
+        {
+            errorMessage = "Max input file size must be 0 or greater";
+            return false;
+        }
+
+        if (AutoAnalyzeThreshold < 0)
+        {
+            errorMessage = "Auto-analyze threshold must be 0 or greater";
+            return false;
+        }
+
+        // Optional sanity bounds to avoid accidental huge values.
+        // 1,048,576 MB = 1 TB.
+        if (MaxInputFileSize > 1_048_576)
+        {
+            errorMessage = "Max input file size must be 1 TB (1,048,576 MB) or less";
+            return false;
+        }
+
+        if (AutoAnalyzeThreshold > 1_048_576)
+        {
+            errorMessage = "Auto-analyze threshold must be 1 TB (1,048,576 MB) or less";
+            return false;
+        }
+
+        if (MaxInputFileSize > 0 && AutoAnalyzeThreshold > MaxInputFileSize)
+        {
+            errorMessage = "Auto-analyze threshold must be less than or equal to max input file size";
             return false;
         }
 

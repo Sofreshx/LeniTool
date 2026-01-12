@@ -1,5 +1,7 @@
 {
   "maxChunkSizeMB": 4.5,
+  "maxInputFileSize": 5120,
+  "autoAnalyzeThreshold": 100,
   "segmentationTags": [
     "<section",
     "<div class=\"page\"",

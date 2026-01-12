@@ -13,3 +13,15 @@
 - task-000009 — Future: Scaffold PDF strategy and define extension point (no full implementation)
 
 Notes: Tasks are ordered and include dependencies and acceptance criteria; each task file contains Implementation Notes and Validation steps to make them actionable.
+
+2026-01-12 — Added tasks for UI modernization, file size limits, improved drag/drop, richer preview, examples, verifier and tests:
+
+- task-000010 — UI: Add input file size limits + thresholds
+- task-000011 — UI: Modern dark theme + layout refresh
+- task-000012 — UI: Drag-and-drop reliability + drop-zone UX
+- task-000013 — UI/Core integration: Preview expected chunks + detected balises on add
+- task-000014 — Examples: Make generator produce more complex nested markup inputs
+- task-000015 — Core: Implement SplitOutputVerifier (equivalence checker)
+- task-000016 — Tests: Add fixtures + integration tests for nested wrappers + verifier
+
+Notes: `task-000016` is a test-focused chore; a detailed test task was also added at `.instructions/test-tasks/test-000001--add-fixtures-integration-verifier.md` to capture fixture generation and CI integration. These tasks are linked; e.g., `task-000014` feeds `task-000016`, and `task-000015` feeds `task-000016`.

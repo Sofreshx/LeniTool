@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LeniTool.Core.Models;
 using LeniTool.Core.Services;
+using Avalonia.Media;
 using ReactiveUI;
 
 namespace LeniTool.Desktop.ViewModels;
@@ -21,8 +22,6 @@ public class MainViewModel : ReactiveObject
     private bool _isConfigExpanded = true;
     private string _statusText = "Ready";
     private FileItemViewModel? _selectedFile;
-
-    private const long AutoAnalyzeMaxBytes = 15L * 1024L * 1024L;
 
     public MainViewModel()
     {
@@ -124,6 +123,28 @@ public class MainViewModel : ReactiveObject
         }
     }
 
+    public double MaxInputFileSizeGB
+    {
+        get => Configuration.MaxInputFileSize / 1024d;
+        set
+        {
+            Configuration.MaxInputFileSize = Math.Max(0, value) * 1024d;
+            this.RaisePropertyChanged();
+            this.RaisePropertyChanged(nameof(MaxInputFileSizeGB));
+        }
+    }
+
+    public double AutoAnalyzeThresholdMB
+    {
+        get => Configuration.AutoAnalyzeThreshold;
+        set
+        {
+            Configuration.AutoAnalyzeThreshold = Math.Max(0, value);
+            this.RaisePropertyChanged();
+            this.RaisePropertyChanged(nameof(AutoAnalyzeThresholdMB));
+        }
+    }
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -189,6 +210,8 @@ public class MainViewModel : ReactiveObject
             this.RaisePropertyChanged(nameof(NamingPattern));
             this.RaisePropertyChanged(nameof(OutputDirectory));
             this.RaisePropertyChanged(nameof(MaxParallelFiles));
+            this.RaisePropertyChanged(nameof(MaxInputFileSizeGB));
+            this.RaisePropertyChanged(nameof(AutoAnalyzeThresholdMB));
             AddLog("Configuration loaded successfully");
 
             // Refresh effective defaults for already-added files.
@@ -225,6 +248,11 @@ public class MainViewModel : ReactiveObject
     public async Task AddFilesFromPathsAsync(IEnumerable<string> filePaths)
     {
         var addedAny = false;
+        var addedCount = 0;
+
+        var maxBytes = Configuration.MaxInputFileSizeBytes;
+        var thresholdBytes = Configuration.AutoAnalyzeThresholdBytes;
+
         foreach (var filePath in filePaths.Where(p => !string.IsNullOrWhiteSpace(p)))
         {
             var fullPath = SafeGetFullPath(filePath);
@@ -238,23 +266,52 @@ public class MainViewModel : ReactiveObject
                 continue;
 
             var fileInfo = new FileInfo(fullPath);
+
+            if (maxBytes > 0 && fileInfo.Length > maxBytes)
+            {
+                var rejected = new FileItemViewModel
+                {
+                    FileName = fileInfo.Name,
+                    FilePath = fullPath,
+                    IsRejected = true,
+                    Status = $"Rejected (exceeds max input size: {FormatBytes(maxBytes)})"
+                };
+                rejected.ApplyDefaultsFrom(Configuration);
+                Files.Add(rejected);
+                SelectedFile ??= rejected;
+                addedAny = true;
+                addedCount++;
+
+                AddLog($"Rejected {fileInfo.Name} ({FormatBytes(fileInfo.Length)}): exceeds max input size {FormatBytes(maxBytes)}");
+                continue;
+            }
+
+            var shouldAutoAnalyze = thresholdBytes > 0
+                ? fileInfo.Length <= thresholdBytes
+                : false;
+
             var vm = new FileItemViewModel
             {
                 FileName = fileInfo.Name,
                 FilePath = fullPath,
-                Status = fileInfo.Length <= AutoAnalyzeMaxBytes ? "Analyzing..." : "Added (large file - click Re-analyze)"
+                Status = shouldAutoAnalyze
+                    ? "Analyzing..."
+                    : (thresholdBytes <= 0
+                        ? "Added (auto-analyze disabled - click Re-analyze)"
+                        : $"Added (large file - click Re-analyze; threshold: {FormatBytes(thresholdBytes)})")
             };
             vm.ApplyDefaultsFrom(Configuration);
             Files.Add(vm);
             SelectedFile ??= vm;
             addedAny = true;
+            addedCount++;
 
-            if (fileInfo.Length <= AutoAnalyzeMaxBytes)
+            if (shouldAutoAnalyze)
                 await AnalyzeFileAsync(vm);
         }
 
         if (addedAny)
-            AddLog($"Added {Files.Count} file(s)");
+            AddLog($"Added {addedCount} file(s)");
     }
 
     private async Task ProcessFilesAsync()
@@ -294,7 +351,17 @@ public class MainViewModel : ReactiveObject
                 StatusText = p.Status;
             });
 
-            var filePaths = Files.Select(f => f.FilePath).ToList();
+            var filePaths = Files
+                .Where(f => !f.IsRejected)
+                .Select(f => f.FilePath)
+                .ToList();
+
+            if (filePaths.Count == 0)
+            {
+                AddLog("No eligible files to process (all files rejected)");
+                StatusText = "No eligible files";
+                return;
+            }
             var results = await processingService.ProcessFilesAsync(filePaths, outputDir, true, progress);
 
             foreach (var result in results)
@@ -450,15 +517,43 @@ public class MainViewModel : ReactiveObject
         }
     }
 
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 0)
+            return "-";
+
+        const double KB = 1024d;
+        const double MB = 1024d * 1024d;
+        const double GB = 1024d * 1024d * 1024d;
+
+        if (bytes >= (long)GB)
+            return $"{bytes / GB:F2} GB";
+        if (bytes >= (long)MB)
+            return $"{bytes / MB:F2} MB";
+        if (bytes >= (long)KB)
+            return $"{bytes / KB:F2} KB";
+        return $"{bytes:N0} bytes";
+    }
+
     #endregion
 }
 
 public class FileItemViewModel : ReactiveObject
 {
+    private static readonly IBrush BadgeNeutralBgBrush = new SolidColorBrush(Color.Parse("#242A35"));
+    private static readonly IBrush BadgeNeutralFgBrush = new SolidColorBrush(Color.Parse("#D8DEE9"));
+    private static readonly IBrush BadgeSuccessBgBrush = new SolidColorBrush(Color.Parse("#173426"));
+    private static readonly IBrush BadgeSuccessFgBrush = new SolidColorBrush(Color.Parse("#B7F3D0"));
+    private static readonly IBrush BadgeWarningBgBrush = new SolidColorBrush(Color.Parse("#3A2D12"));
+    private static readonly IBrush BadgeWarningFgBrush = new SolidColorBrush(Color.Parse("#FFD89A"));
+    private static readonly IBrush BadgeDangerBgBrush = new SolidColorBrush(Color.Parse("#3A1820"));
+    private static readonly IBrush BadgeDangerFgBrush = new SolidColorBrush(Color.Parse("#FFC0CB"));
+
     private string _status = string.Empty;
     private double _progress;
     private AnalysisResult? _analysis;
     private bool _isAnalyzing;
+    private bool _isRejected;
     private double _overrideMaxChunkSizeMb = 4.5;
     private bool _overrideAutoDetectRecordTag = true;
     private string _overrideRecordTagName = string.Empty;
@@ -466,10 +561,30 @@ public class FileItemViewModel : ReactiveObject
     public string FileName { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
 
+    public bool IsRejected
+    {
+        get => _isRejected;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isRejected, value);
+            this.RaisePropertyChanged(nameof(StatusBadgeText));
+            this.RaisePropertyChanged(nameof(StatusBadgeClasses));
+            this.RaisePropertyChanged(nameof(StatusBadgeBackground));
+            this.RaisePropertyChanged(nameof(StatusBadgeForeground));
+        }
+    }
+
     public string Status
     {
         get => _status;
-        set => this.RaiseAndSetIfChanged(ref _status, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _status, value);
+            this.RaisePropertyChanged(nameof(StatusBadgeText));
+            this.RaisePropertyChanged(nameof(StatusBadgeClasses));
+            this.RaisePropertyChanged(nameof(StatusBadgeBackground));
+            this.RaisePropertyChanged(nameof(StatusBadgeForeground));
+        }
     }
 
     public double Progress
@@ -481,7 +596,14 @@ public class FileItemViewModel : ReactiveObject
     public bool IsAnalyzing
     {
         get => _isAnalyzing;
-        set => this.RaiseAndSetIfChanged(ref _isAnalyzing, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isAnalyzing, value);
+            this.RaisePropertyChanged(nameof(StatusBadgeText));
+            this.RaisePropertyChanged(nameof(StatusBadgeClasses));
+            this.RaisePropertyChanged(nameof(StatusBadgeBackground));
+            this.RaisePropertyChanged(nameof(StatusBadgeForeground));
+        }
     }
 
     public AnalysisResult? Analysis
@@ -490,13 +612,22 @@ public class FileItemViewModel : ReactiveObject
         set
         {
             this.RaiseAndSetIfChanged(ref _analysis, value);
+            this.RaisePropertyChanged(nameof(IsAnalyzed));
             this.RaisePropertyChanged(nameof(FileSizeBytes));
             this.RaisePropertyChanged(nameof(FileSizeDisplay));
+            this.RaisePropertyChanged(nameof(FileSizeShortDisplay));
             this.RaisePropertyChanged(nameof(EncodingDisplay));
             this.RaisePropertyChanged(nameof(CandidateRecords));
             this.RaisePropertyChanged(nameof(EstimatedPartCount));
+            this.RaisePropertyChanged(nameof(TopCandidateDisplay));
+            this.RaisePropertyChanged(nameof(StatusBadgeText));
+            this.RaisePropertyChanged(nameof(StatusBadgeClasses));
+            this.RaisePropertyChanged(nameof(StatusBadgeBackground));
+            this.RaisePropertyChanged(nameof(StatusBadgeForeground));
         }
     }
+
+    public bool IsAnalyzed => Analysis is not null;
 
     public IReadOnlyList<CandidateRecord> CandidateRecords => (IReadOnlyList<CandidateRecord>?)Analysis?.CandidateRecords ?? Array.Empty<CandidateRecord>();
 
@@ -530,6 +661,28 @@ public class FileItemViewModel : ReactiveObject
             return mb >= 1
                 ? $"{mb:F2} MB ({bytes:N0} bytes)"
                 : $"{bytes:N0} bytes";
+        }
+    }
+
+    public string FileSizeShortDisplay
+    {
+        get
+        {
+            var bytes = FileSizeBytes;
+            if (bytes <= 0)
+                return "-";
+
+            const double KB = 1024d;
+            const double MB = 1024d * 1024d;
+            const double GB = 1024d * 1024d * 1024d;
+
+            if (bytes >= (long)GB)
+                return $"{bytes / GB:F2} GB";
+            if (bytes >= (long)MB)
+                return $"{bytes / MB:F2} MB";
+            if (bytes >= (long)KB)
+                return $"{bytes / KB:F2} KB";
+            return $"{bytes:N0} B";
         }
     }
 
@@ -588,6 +741,85 @@ public class FileItemViewModel : ReactiveObject
                 return 0;
 
             return (int)Math.Max(1, Math.Ceiling(bytes / (double)targetBytes));
+        }
+    }
+
+    public string TopCandidateDisplay
+    {
+        get
+        {
+            var top = CandidateRecords
+                .OrderByDescending(c => c.Confidence)
+                .FirstOrDefault();
+
+            if (top is null)
+                return "-";
+
+            if (string.IsNullOrWhiteSpace(top.TagName))
+                return "-";
+
+            var pct = Math.Clamp(top.Confidence, 0d, 1d);
+            return $"{top.TagName} ({pct:P0})";
+        }
+    }
+
+    public string StatusBadgeText
+    {
+        get
+        {
+            if (IsRejected)
+                return "Rejected";
+            if (IsAnalyzing)
+                return "Analyzing";
+            if (Analysis is not null && CandidateRecords.Count > 0)
+                return "Analyzed";
+            if (Analysis is not null)
+                return "Analyzed";
+            if (!string.IsNullOrWhiteSpace(Status))
+                return "Pending";
+            return "Pending";
+        }
+    }
+
+    public string StatusBadgeClasses
+    {
+        get
+        {
+            if (IsRejected)
+                return "badge danger";
+            if (IsAnalyzing)
+                return "badge warning";
+            if (Analysis is not null)
+                return "badge success";
+            return "badge";
+        }
+    }
+
+    public IBrush StatusBadgeBackground
+    {
+        get
+        {
+            if (IsRejected)
+                return BadgeDangerBgBrush;
+            if (IsAnalyzing)
+                return BadgeWarningBgBrush;
+            if (IsAnalyzed)
+                return BadgeSuccessBgBrush;
+            return BadgeNeutralBgBrush;
+        }
+    }
+
+    public IBrush StatusBadgeForeground
+    {
+        get
+        {
+            if (IsRejected)
+                return BadgeDangerFgBrush;
+            if (IsAnalyzing)
+                return BadgeWarningFgBrush;
+            if (IsAnalyzed)
+                return BadgeSuccessFgBrush;
+            return BadgeNeutralFgBrush;
         }
     }
 

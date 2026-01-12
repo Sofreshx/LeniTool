@@ -142,8 +142,63 @@ Rollback strategy
 4. Create test fixtures from the test matrix and add unit/integration tests.
 5. Performance benchmarking with multi-GB synthetic files.
 
+---
+
+## Phase: UI modernization + file size limits + richer preview + verification tooling 🔧
+
+**Summary:** Deliver a modern dark UI, robust file-size controls, richer inline preview and drag/drop reliability, example generator enhancements, and a `SplitOutputVerifier` to validate split outputs for TXT/markup strategies.
+
+### UI requirements ✅
+- Adopt dark/modern theme: **Avalonia Fluent Dark** as the primary theme, with accessible contrast and consistent typography.
+- Improved layout: cleaner file list (sortable, filterable), persistent right-side analysis panel remains; add a compact toolbar for common actions (Analyze, Preview, Split).
+- Visual feedback: per-file status badges (Analyzed | Pending | Too Large | Error), progress bars, and inline action affordances.
+
+### File size controls ⚠️
+- Two limits:
+  - **Hard cap**: `MaxInputFileSize` (default example: 4 GB) — reject files over cap with a clear error and link to docs.
+  - **Auto-analyze threshold**: `AutoAnalyzeThreshold` (default example: 50 MB) — files larger than threshold are added but analysis is paused; user must click **Analyze** to start.
+- Behavior: when the auto-analyze threshold is exceeded show a clear warning and an "Analyze anyway" button; analysis runs in a cancellable worker with progress reporting.
+
+### Drag & drop 📥
+- Support both `DataFormats.Files` and `DataFormats.FileNames` to maximize platform compatibility.
+- Allow drop target on the whole window and on the files panel; show a visual drop target overlay and animate accepted files.
+- If a dropped file exceeds `MaxInputFileSize`, reject immediately with a helpful message.
+
+### Preview & file list enhancements 🔍
+- File list shows:
+  - Estimated part count
+  - Top recognized record tag candidate + confidence (if analyzed)
+  - If not analyzed, show a fallback estimated part count based on size (size / `targetBytes`) and mark it as an "estimate".
+- Quick inline actions: Analyze, Preview, Open Override UI.
+
+### Examples & generator ✨
+- Enhance example generator to produce:
+  - Nested wrapper inputs (envelope/header/payload/footer) with multiple wrapper layers.
+  - Edge cases: single-record files, zero-record wrappers, overlapping/malformed wrappers, and highly repetitive noise.
+- Add generator flags to control nesting depth, noise level, and record size variance.
+
+### Verification: `SplitOutputVerifier` algorithm 🧪
+- **Purpose:** Validate outputs of TXT/markup `SplitStrategy` are byte-equivalent to the original middle content and preserve prefix/suffix.
+- **Algorithm (concise):**
+  1. Determine prefix and suffix boundaries and record-tag selection using the same detection rules as the splitter.
+  2. For each output chunk:
+     - Verify the chunk starts with the original prefix bytes and ends with the original suffix bytes.
+     - Strip prefix/suffix from the chunk to obtain inner bytes for that chunk.
+  3. Concatenate inner bytes from all chunks in order and assert the result equals the original middle bytes (the bytes between `prefixEnd` and `suffixStart`) exactly.
+  4. On mismatch, report diagnostics: first differing offset, original vs reconstructed lengths, index of the failing chunk, and a small hex/snippet diff around the difference.
+- Integrate verifier as an optional post-split UI step and as an automated test harness for split strategies.
+
+### Validation checklist ✅
+- **Manual UX checks:** theme applied, drop overlay works, files panel shows estimates and candidates, analyze workflow for large files, explicit warnings for hard cap.
+- **Automated tests:**
+  - Unit tests for UI logic (estimates, badges, drop handling), analyzer thresholds, and generator outputs.
+  - Integration tests: run sample splits with `SplitOutputVerifier`, include nested wrappers and edge cases, assert verifier passes and mismatches produce expected diagnostics.
+  - Performance tests around thresholds and cancellation behavior.
+
+---
+
 > Note: This plan is intentionally implementation-agnostic and focused on behaviour, UX, and validation.
 
 ---
 
-*Document created for planning: ` .instructions/artefacts/x-PLAN-artefact.md`*
+*Document created for planning: `.instructions/artefacts/x-PLAN-artefact.md`*
