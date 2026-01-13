@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000013
 title: "UI/Core integration: Preview expected chunks + detected balises on add"
 type: feature
-status: not-started
+status: done
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert"]
 depends_on: ["task-000010","task-000012"]
 next_tasks: []
 created: "2026-01-12"
-updated: "2026-01-12"
+updated: "2026-01-13"
 ---
 
 ## Context
@@ -49,3 +49,14 @@ Files likely touched:
 
 - Keep the UI compact: prioritize key info in the row, hide low-confidence items behind details.
 - Consider adding telemetry or logs for analyzer confidence for future improvements.
+
+## Implementation / Verification Log
+
+- Verified file list row includes Size, Est Parts, Top Tag, Status columns and binds to `EstimatedPartCount` and `TopCandidateDisplay`.
+- Verified est parts appears immediately on add (computed from file size + per-file effective target size via `ApplyDefaultsFrom`).
+- Verified top candidate tag + confidence appears after `Analysis` is assigned; candidate list remains visible in the right panel.
+- Small UI wording tweak: changed "Re-analyze" action label/status copy to "Analyze" for first-time analysis clarity.
+
+## Validation
+
+- `dotnet build src/LeniTool.Desktop/LeniTool.Desktop.csproj` (Windows) — success.

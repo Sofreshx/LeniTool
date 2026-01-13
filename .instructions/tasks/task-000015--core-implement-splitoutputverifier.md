@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000015
 title: "Core: Implement SplitOutputVerifier (equivalence checker)"
 type: feature
-status: not-started
+status: done
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert", "testing-dotnet-unit"]
 depends_on: []
 next_tasks: ["task-000016"]
 created: "2026-01-12"
-updated: "2026-01-12"
+updated: "2026-01-13"
 ---
 
 ## Context
@@ -56,3 +56,15 @@ Design decisions:
 ## Notes / Next Steps
 
 - Decide whether to include a minimal CLI wrapper in the same repo or keep verifier as an internal test utility for now.
+
+## Implementation / Validation Log
+
+- Implemented `SplitOutputVerifier` in Core with streaming byte-compare:
+	- Verifies per-chunk prefix/suffix equality vs source.
+	- Verifies concatenated chunk-inner bytes equals source-inner bytes.
+	- On failure reports: kind, chunk index/path, first diff offset (inner), expected/actual inner lengths, and small hex snippets.
+- Added `TxtMarkupSplitBoundaryResolver` and refactored `TxtMarkupSplitterService` to use it so splitter/verifier share identical prefix/suffix boundary logic.
+- Added unit tests covering known-good splits (UTF-8 + UTF-16 BOM) and a known-bad mutated chunk producing an inner mismatch diagnostic.
+
+Validation:
+- `dotnet test tests/LeniTool.Core.Tests/LeniTool.Core.Tests.csproj` (pass)

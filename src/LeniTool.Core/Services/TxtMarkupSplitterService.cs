@@ -61,76 +61,19 @@ public sealed class TxtMarkupSplitterService : ISplitterStrategy
             .AnalyzeAsync(filePath, targetMaxChunkBytes: resolved.MaxChunkSizeBytes, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        var configuredTag = resolved.RecordTagName?.Trim();
-        var allowAutoDetect = resolved.AutoDetectRecordTag;
-        var hasConfiguredTag = !string.IsNullOrWhiteSpace(configuredTag);
-
-        if (!allowAutoDetect && !hasConfiguredTag)
+        var boundaries = TxtMarkupSplitBoundaryResolver.TryResolve(analysis, resolved, fileInfo.Length, out var failureReason);
+        if (boundaries is null)
         {
             progress?.Report(new ProcessingProgress
             {
                 FileName = fileInfo.Name,
-                Status = "Record tag auto-detection disabled and no record tag configured - no split performed"
+                Status = $"{failureReason} - no split performed"
             });
             return new List<string> { filePath };
         }
 
-        CandidateRecord? selected = null;
-        if (hasConfiguredTag)
-        {
-            selected = analysis.CandidateRecords
-                .FirstOrDefault(r => string.Equals(r.TagName, configuredTag, StringComparison.OrdinalIgnoreCase));
-
-            // If the tag was configured but not detected during analysis, we can still attempt a scan.
-            // Wrapper boundaries will fall back to the full file (0..Length).
-            if (selected is null)
-                selected = new CandidateRecord { TagName = configuredTag! };
-        }
-        else
-        {
-            selected = analysis.CandidateRecords.FirstOrDefault();
-        }
-
-        if (selected is null || string.IsNullOrWhiteSpace(selected.TagName))
-        {
-            progress?.Report(new ProcessingProgress
-            {
-                FileName = fileInfo.Name,
-                Status = "No repeating record tag detected - no split performed"
-            });
-            return new List<string> { filePath };
-        }
-
-        var prefixEnd = selected.FirstOpenOffsetBytes;
-        var suffixStart = selected.LastCloseEndOffsetBytes;
-
-        if (prefixEnd <= 0 && suffixStart <= 0)
-        {
-            // If we are using a user-configured tag that analysis didn't detect, we can't rely on
-            // wrapper boundaries computed for a different candidate. Scan the full file.
-            if (hasConfiguredTag && analysis.CandidateRecords.All(r =>
-                    !string.Equals(r.TagName, configuredTag, StringComparison.OrdinalIgnoreCase)))
-            {
-                prefixEnd = 0;
-                suffixStart = fileInfo.Length;
-            }
-            else
-            {
-                var wrapper = analysis.WrapperRange;
-                prefixEnd = wrapper?.PrefixEndOffsetBytes ?? 0;
-                suffixStart = wrapper?.SuffixStartOffsetBytes ?? fileInfo.Length;
-            }
-        }
-
-        if (prefixEnd < 0)
-            prefixEnd = 0;
-        if (suffixStart <= 0 || suffixStart > fileInfo.Length)
-            suffixStart = fileInfo.Length;
-        if (suffixStart < prefixEnd)
-        {
-            prefixEnd = 0;
-            suffixStart = fileInfo.Length;
-        }
+        var prefixEnd = boundaries.Value.PrefixEndOffsetBytes;
+        var suffixStart = boundaries.Value.SuffixStartOffsetBytes;
 
         var encoding = ResolveEncoding(analysis.EncodingName);
 
@@ -139,7 +82,7 @@ public sealed class TxtMarkupSplitterService : ISplitterStrategy
             encoding,
             scanStartOffsetBytes: prefixEnd,
             scanEndOffsetBytesExclusive: suffixStart,
-            tagName: selected.TagName,
+            tagName: boundaries.Value.TagName,
             cancellationToken: cancellationToken);
 
         var outputs = await _chunker

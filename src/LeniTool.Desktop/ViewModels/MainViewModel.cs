@@ -297,8 +297,8 @@ public class MainViewModel : ReactiveObject
                 Status = shouldAutoAnalyze
                     ? "Analyzing..."
                     : (thresholdBytes <= 0
-                        ? "Added (auto-analyze disabled - click Re-analyze)"
-                        : $"Added (large file - click Re-analyze; threshold: {FormatBytes(thresholdBytes)})")
+                        ? "Added (auto-analyze disabled - click Analyze)"
+                        : $"Added (large file - click Analyze; threshold: {FormatBytes(thresholdBytes)})")
             };
             vm.ApplyDefaultsFrom(Configuration);
             Files.Add(vm);

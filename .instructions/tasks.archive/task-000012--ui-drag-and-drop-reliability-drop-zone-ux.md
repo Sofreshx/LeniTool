@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000012
 title: "UI: Drag-and-drop reliability + drop-zone UX"
 type: feature
-status: not-started
+status: done
 priority: medium
 owner: "dev-handle"
 skills: ["csharp-expert", "testing-frontend-unit"]
 depends_on: ["task-000010"]
 next_tasks: ["task-000013"]
 created: "2026-01-12"
-updated: "2026-01-12"
+updated: "2026-01-13"
 ---
 
 ## Context
@@ -47,3 +47,13 @@ Files likely touched:
 ## Notes / Next Steps
 
 - Consider adding quick hints in the UI (e.g., "Drop files here or click Add") when UX changes are live.
+
+## Implementation Log
+
+- 2026-01-13: Enabled window-wide drop target (`DragDrop.AllowDrop` on `MainWindow`) and routed drag/drop handlers on the window so dropping works reliably across the whole UI.
+- 2026-01-13: Added a centered overlay that appears during drag and indicates allowed vs rejected state; rejects when drag data isn’t files or when files exceed `MaxInputFileSizeBytes` (drop is still allowed so the rejection is logged consistently).
+- 2026-01-13: Added support for both `DataFormats.Files` and `DataFormats.FileNames` and filters dropped items to supported extensions (`.txt`, `.html`, `.htm`).
+
+## Validation
+
+- `dotnet build src/LeniTool.Desktop/LeniTool.Desktop.csproj` (Windows) ✅
