@@ -3,7 +3,7 @@ schema: task/v1
 id: task-000008
 title: "Docs: Update README/QUICKSTART/CLI usage to reflect txt support + detection/override behavior"
 type: docs
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["planning-feature"]

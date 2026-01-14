@@ -1,0 +1,7 @@
+<Root>
+  <Item>One</Item>
+  <Item>Two
+  <Item>Three</Item>
+  <<bad
+  <Noise>Ignore</Noise>
+</Root>

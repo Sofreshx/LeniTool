@@ -1,0 +1,13 @@
+<Envelope>
+  <Header>
+    <Version>1</Version>
+  </Header>
+  <Body>
+    <Example>
+      <Ficher id="1"><Name>One</Name></Ficher>
+      <Ficher id="2"><Name>Two</Name></Ficher>
+      <Ficher id="3"><Name>Three</Name></Ficher>
+    </Example>
+  </Body>
+  <Footer>END</Footer>
+</Envelope>

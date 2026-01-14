@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000004
 title: "Core: Implement record-boundary chunking using byte sizes + streaming write"
 type: feature
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert", "planning-feature"]
 depends_on: ["task-000002", "task-000003"]
 next_tasks: ["task-000005", "task-000007"]
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-14"
 ---
 
 ## Context

@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000001
 title: "Explore UI: UI drop/add flow & decide where analysis is surfaced"
 type: research
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["planning-feature", "react-query"]
 depends_on: []
 next_tasks: ["task-000006"]
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-14"
 ---
 
 ## Context

@@ -3,7 +3,7 @@ schema: task/v1
 id: task-000007
 title: "Tests: Unit tests for analyzer + splitter using example markup and edge cases"
 type: chore
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["testing-dotnet-unit", "csharp-expert"]

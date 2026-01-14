@@ -1,0 +1,16 @@
+<Root>
+  <Meta>Header</Meta>
+  <A>Alpha1</A>
+  <A>Alpha2</A>
+  <B>Beta1</B>
+  <A>Alpha3</A>
+  <B>Beta2</B>
+  <A>Alpha4</A>
+  <B>Beta3</B>
+  <A>Alpha5</A>
+  <B>Beta4</B>
+  <A>Alpha6</A>
+  <A>Alpha7</A>
+  <A>Alpha8</A>
+  <Tail>End</Tail>
+</Root>

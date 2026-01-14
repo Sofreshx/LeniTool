@@ -1,0 +1,42 @@
+<Envelope>
+  <Header>
+    <MessageId>abc-123</MessageId>
+    <CreatedUtc>2026-01-14T12:34:56Z</CreatedUtc>
+  </Header>
+
+  <Payload>
+    <Body>
+      <Example>
+        <Ficher id="1"><Name>Record 1</Name><Data>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</Data></Ficher>
+        <Ficher id="2"><Name>Record 2</Name><Data>Vivamus lacinia odio vitae vestibulum vestibulum.</Data></Ficher>
+        <Ficher id="3"><Name>Record 3</Name><Data>Cras placerat ultricies sem, sed porta justo.</Data></Ficher>
+        <Ficher id="4"><Name>Record 4</Name><Data>Sed ut perspiciatis unde omnis iste natus error sit.</Data></Ficher>
+        <Ficher id="5"><Name>Record 5</Name><Data>At vero eos et accusamus et iusto odio dignissimos.</Data></Ficher>
+        <Ficher id="6"><Name>Record 6</Name><Data>Quis autem vel eum iure reprehenderit qui in ea.</Data></Ficher>
+        <Ficher id="7"><Name>Record 7</Name><Data>Ut enim ad minima veniam, quis nostrum exercitationem.</Data></Ficher>
+        <Ficher id="8"><Name>Record 8</Name><Data>Duis aute irure dolor in reprehenderit in voluptate.</Data></Ficher>
+        <Ficher id="9"><Name>Record 9</Name><Data>Excepteur sint occaecat cupidatat non proident.</Data></Ficher>
+        <Ficher id="10"><Name>Record 10</Name><Data>Sunt in culpa qui officia deserunt mollit anim id est.</Data></Ficher>
+        <Ficher id="11"><Name>Record 11</Name><Data>Curabitur non nulla sit amet nisl tempus convallis.</Data></Ficher>
+        <Ficher id="12"><Name>Record 12</Name><Data>Pellentesque in ipsum id orci porta dapibus.</Data></Ficher>
+        <Ficher id="13"><Name>Record 13</Name><Data>Donec rutrum congue leo eget malesuada.</Data></Ficher>
+        <Ficher id="14"><Name>Record 14</Name><Data>Vestibulum ac diam sit amet quam vehicula elementum.</Data></Ficher>
+        <Ficher id="15"><Name>Record 15</Name><Data>Mauris blandit aliquet elit, eget tincidunt nibh.</Data></Ficher>
+        <Ficher id="16"><Name>Record 16</Name><Data>Nulla porttitor accumsan tincidunt.</Data></Ficher>
+        <Ficher id="17"><Name>Record 17</Name><Data>Praesent sapien massa, convallis a pellentesque nec.</Data></Ficher>
+        <Ficher id="18"><Name>Record 18</Name><Data>Proin eget tortor risus. Nulla quis lorem ut libero.</Data></Ficher>
+        <Ficher id="19"><Name>Record 19</Name><Data>Quisque velit nisi, pretium ut lacinia in, elementum.</Data></Ficher>
+        <Ficher id="20"><Name>Record 20</Name><Data>Vivamus suscipit tortor eget felis porttitor volutpat.</Data></Ficher>
+        <Ficher id="21"><Name>Record 21</Name><Data>Curabitur arcu erat, accumsan id imperdiet et, porttitor.</Data></Ficher>
+        <Ficher id="22"><Name>Record 22</Name><Data>Donec sollicitudin molestie malesuada.</Data></Ficher>
+        <Ficher id="23"><Name>Record 23</Name><Data>Vivamus magna justo, lacinia eget consectetur sed.</Data></Ficher>
+        <Ficher id="24"><Name>Record 24</Name><Data>Praesent sapien massa, convallis a pellentesque nec.</Data></Ficher>
+      </Example>
+    </Body>
+  </Payload>
+
+  <Footer>
+    <Checksum>deadbeef</Checksum>
+    <End>END</End>
+  </Footer>
+</Envelope>

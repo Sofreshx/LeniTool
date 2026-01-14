@@ -3,7 +3,7 @@ schema: task/v1
 id: task-000014
 title: "Examples: Make generator produce more complex nested markup inputs"
 type: feature
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["planning-feature"]

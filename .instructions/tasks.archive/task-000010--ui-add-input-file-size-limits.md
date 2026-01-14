@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000010
 title: "UI: Add input file size limits + thresholds"
 type: feature
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["csharp-expert"]
 depends_on: []
 next_tasks: ["task-000012", "task-000013"]
 created: "2026-01-12"
-updated: "2026-01-12"
+updated: "2026-01-14"
 ---
 
 ## Context

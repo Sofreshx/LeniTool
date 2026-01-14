@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000012
 title: "UI: Drag-and-drop reliability + drop-zone UX"
 type: feature
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["csharp-expert", "testing-frontend-unit"]
 depends_on: ["task-000010"]
 next_tasks: ["task-000013"]
 created: "2026-01-12"
-updated: "2026-01-13"
+updated: "2026-01-14"
 ---
 
 ## Context

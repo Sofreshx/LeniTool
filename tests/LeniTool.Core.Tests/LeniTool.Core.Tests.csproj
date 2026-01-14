@@ -22,4 +22,11 @@
     <ProjectReference Include="..\..\src\LeniTool.Core\LeniTool.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\fixtures\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>fixtures\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </Content>
+  </ItemGroup>
+
 </Project>

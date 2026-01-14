@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000013
 title: "UI/Core integration: Preview expected chunks + detected balises on add"
 type: feature
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert"]
 depends_on: ["task-000010","task-000012"]
 next_tasks: []
 created: "2026-01-12"
-updated: "2026-01-13"
+updated: "2026-01-14"
 ---
 
 ## Context

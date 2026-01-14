@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000011
 title: "UI: Modern dark theme + layout refresh"
 type: feature
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["csharp-expert", "testing-frontend-unit"]
 depends_on: []
 next_tasks: []
 created: "2026-01-12"
-updated: "2026-01-12"
+updated: "2026-01-14"
 ---
 
 ## Context

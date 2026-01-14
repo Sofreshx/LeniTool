@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000005
 title: "Core: Update configuration model to support auto-detected + user overrides (per-extension profiles)"
 type: feature
-status: done
+status: archived
 priority: medium
 owner: "dev-handle"
 skills: ["csharp-expert"]
 depends_on: ["task-000002", "task-000003"]
 next_tasks: ["task-000006", "task-000008"]
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-14"
 ---
 
 ## Context

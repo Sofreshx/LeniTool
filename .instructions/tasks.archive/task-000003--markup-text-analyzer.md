@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000003
 title: "Core: Implement markup/text analyzer that detects candidate record tags + wrapper offsets"
 type: feature
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert", "marten-linq-querying"]
 depends_on: ["task-000002"]
 next_tasks: ["task-000004", "task-000005", "task-000007"]
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-14"
 ---
 
 ## Context

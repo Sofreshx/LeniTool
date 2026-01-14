@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000006
 title: "UI: Show analysis on file add/drop; allow override; persist overrides"
 type: feature
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["react-query", "testing-frontend-unit"]
 depends_on: ["task-000001", "task-000005"]
 next_tasks: ["task-000008"]
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-14"
 ---
 
 ## Context

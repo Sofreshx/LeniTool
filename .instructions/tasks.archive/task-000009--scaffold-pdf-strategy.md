@@ -3,7 +3,7 @@ schema: task/v1
 id: task-000009
 title: "Future: Scaffold PDF strategy and define extension point (no full impl)"
 type: research
-status: done
+status: archived
 priority: low
 owner: "dev-handle"
 skills: ["planning-feature"]

@@ -177,6 +177,10 @@ public class FileProcessingService
         var registry = new SplitterStrategyRegistry();
         registry.Register(new HtmlSplitterService(config));
         registry.Register(new TxtMarkupSplitterService(config));
+        // NOTE: PDF is intentionally not enabled by default yet.
+        // A placeholder strategy exists (`PdfSplitterService`) to reserve the extension point,
+        // but it throws on split until real PDF support is implemented.
+        // registry.Register(new PdfSplitterService(config));
         return registry;
     }
 }

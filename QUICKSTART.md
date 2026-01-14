@@ -4,12 +4,13 @@
 
 ### 1. Prerequisites
 
-Install .NET 8 SDK and MAUI workload (one-time setup):
+Install the .NET 8 SDK:
 
-```powershell
-# Install MAUI workload
-dotnet workload install maui
-```
+- https://dotnet.microsoft.com/download
+
+Notes:
+- The primary app is the Avalonia Desktop UI (`src/LeniTool.Desktop/`) and does not require MAUI workloads.
+- A MAUI UI project exists (`src/LeniTool.UI/`) but is not the recommended starting point.
 
 ### 2. Build the Application
 
@@ -22,16 +23,16 @@ dotnet build
 ### 3. Run the Application
 
 ```powershell
-dotnet run --project src/LeniTool.UI/LeniTool.UI.csproj
+dotnet run --project src/LeniTool.Desktop/LeniTool.Desktop.csproj
 ```
 
 ### 4. Create Standalone Executable
 
 ```powershell
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 ```
 
-The executable will be in: `src/LeniTool.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/LeniTool.UI.exe`
+The executable will be in: `src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish/`
 
 Copy this file anywhere and run it - no installation needed!
 
@@ -44,7 +45,7 @@ Copy this file anywhere and run it - no installation needed!
 
 2. **Add Files**
    - Click "Add Files" button
-   - Select one or more HTML files
+   - Select one or more `.html/.htm` or `.txt` files
    - Files appear in the file list
 
 3. **Process**
@@ -82,17 +83,7 @@ Click "Browse" next to Output Directory to choose where files are saved.
 ## Troubleshooting
 
 ### Can't build?
-```powershell
-# Install .NET 8 SDK from: https://dotnet.microsoft.com/download
-# Install MAUI workload
-dotnet workload install maui
-```
-
-### MAUI errors?
-```powershell
-# Update workloads
-dotnet workload update
-```
+Install the .NET 8 SDK from https://dotnet.microsoft.com/download
 
 ### Need help?
 Check the full [README.md](README.md) or [BUILD.md](BUILD.md) for detailed instructions.
@@ -104,17 +95,59 @@ Check the full [README.md](README.md) or [BUILD.md](BUILD.md) for detailed instr
 - Run tests: `dotnet test`
 - Customize configuration in `config.json`
 
+## Minimal TXT Markup Workflow
+
+Use this when you have a large `.txt` file with tag-like markup (pseudo-XML / pseudo-HTML) and you want to split by a repeating record element.
+
+### Example input
+
+```text
+<Envelope>
+   <Ficher><Id>1</Id></Ficher>
+   <Ficher><Id>2</Id></Ficher>
+   <Ficher><Id>3</Id></Ficher>
+</Envelope>
+```
+
+### Recommended flow
+
+1. Add the `.txt` file to the Desktop app.
+2. Use Analyze (if available) to see detected candidate record tags.
+3. If the detected tag is wrong, override it in the Analysis/Overrides panel by turning off auto-detect and setting `recordTagName`.
+4. Process the file.
+
+### Config override example (optional)
+
+LeniTool writes `config.json` next to the executable on first run. You can add per-extension or per-file overrides:
+
+```json
+{
+   "extensionProfiles": {
+      ".txt": {
+         "autoDetectRecordTag": false,
+         "recordTagName": "Ficher"
+      }
+   },
+   "fileOverrides": {
+      "C:\\data\\one-off.txt": {
+         "autoDetectRecordTag": false,
+         "recordTagName": "Record"
+      }
+   }
+}
+```
+
 ## Example Workflow
 
 ```powershell
 # 1. Build release version
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 
 # 2. Navigate to output
-cd src/LeniTool.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/
+cd src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish/
 
 # 3. Run it
-./LeniTool.UI.exe
+./LeniTool.Desktop.exe
 
 # 4. Copy executable anywhere you want - it's portable!
 ```

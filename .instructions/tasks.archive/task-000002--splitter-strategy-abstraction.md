@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000002
 title: "Core: Introduce splitter strategy abstraction by file type (.html/.txt)"
 type: feature
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert", "planning-feature"]
 depends_on: []
 next_tasks: ["task-000003", "task-000004", "task-000009"]
 created: "2026-01-11"
-updated: "2026-01-11"
+updated: "2026-01-14"
 ---
 
 ## Context

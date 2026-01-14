@@ -3,7 +3,7 @@ schema: task/v1
 id: task-000016
 title: "Tests: Add fixtures + integration tests for nested wrappers + verifier"
 type: chore
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["testing-dotnet-unit", "testing-frontend-unit"]

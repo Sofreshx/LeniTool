@@ -41,3 +41,14 @@ Notes: `task-000016` is a test-focused chore; a detailed test task was also adde
 
 - task-000012 — UI: Drag-and-drop reliability + drop-zone UX
 - task-000013 — UI/Core integration: Preview expected chunks + detected balises on add
+
+2026-01-14 — Archived remaining completed tasks and normalized archive metadata:
+
+- task-000007 — Tests: Unit tests for analyzer + splitter using example markup and edge cases
+- task-000008 — Docs: Update README/QUICKSTART/CLI usage to reflect txt support + detection/override behavior
+- task-000009 — Future: Scaffold PDF strategy and define extension point (no full implementation)
+- task-000014 — Examples: Make generator produce more complex nested markup inputs
+- task-000015 — Core: Implement SplitOutputVerifier (equivalence checker)
+- task-000016 — Tests: Add fixtures + integration tests for nested wrappers + verifier
+
+Notes: Updated archived task front matter to `status: archived` and bumped `updated` dates for consistency.

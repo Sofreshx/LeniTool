@@ -3,14 +3,14 @@ schema: task/v1
 id: task-000015
 title: "Core: Implement SplitOutputVerifier (equivalence checker)"
 type: feature
-status: done
+status: archived
 priority: high
 owner: "dev-handle"
 skills: ["csharp-expert", "testing-dotnet-unit"]
 depends_on: []
 next_tasks: ["task-000016"]
 created: "2026-01-12"
-updated: "2026-01-13"
+updated: "2026-01-14"
 ---
 
 ## Context

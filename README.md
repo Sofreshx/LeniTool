@@ -1,14 +1,16 @@
-# LeniTool - HTML File Splitter
+# LeniTool - Large File Splitter (HTML + Markup TXT)
 
-A modern .NET MAUI Windows application for splitting large HTML files (like RSP "retour sur prestation" files) into smaller, manageable chunks while preserving HTML structure.
+LeniTool is a Windows desktop application for splitting large files into smaller parts while keeping important structure intact.
+
+The primary app is the **Avalonia Desktop** UI in `src/LeniTool.Desktop/`. A legacy/experimental MAUI UI project still exists in `src/LeniTool.UI/`, but it is not the main documented workflow.
 
 ## Features
 
 ✨ **Smart Splitting**
 - Configurable maximum chunk size (default: 4.5 MB)
-- Intelligent segmentation at HTML tags
-- Preserves HTML structure and tag balance
-- Adds custom opening/closing tags to chunks
+- **HTML**: splits near configured segmentation tags while preserving structure (opening/closing tags are added as needed)
+- **TXT (markup / pseudo-XML)**: splits on whole “record” elements (auto-detected or manually configured)
+- Preserves wrapper/prefix/suffix bytes around records when possible (for TXT markup)
 
 🚀 **High Performance**
 - Parallel file processing
@@ -16,10 +18,9 @@ A modern .NET MAUI Windows application for splitting large HTML files (like RSP 
 - Progress tracking for each file
 
 ⚙️ **Flexible Configuration**
-- Customizable segmentation tags
-- Configurable opening/closing tags
-- Custom file naming patterns
-- Persistent configuration (saved locally)
+- Persistent `config.json` (auto-created next to the executable on first run)
+- Global defaults + per-extension profiles + per-file overrides
+- Manual override of record-tag detection from the Desktop UI
 
 🎨 **Modern UI**
 - Clean, intuitive interface
@@ -27,31 +28,33 @@ A modern .NET MAUI Windows application for splitting large HTML files (like RSP 
 - Real-time progress tracking
 - Detailed logging
 
+## Supported File Types
+
+| Extension | Support | Notes |
+|---|---|---|
+| `.html`, `.htm` | ✅ | Split near configured HTML segmentation tags |
+| `.txt` | ✅ | For text files containing XML/HTML-like markup; splits on a repeating record tag |
+| `.pdf` | ❌ (planned) | A placeholder strategy exists, but PDF splitting is not implemented |
+
 ## Quick Start
 
 ### Prerequisites
 
 1. Install the .NET 8 SDK from https://dotnet.microsoft.com/download
-2. Install MAUI workload (one-time):
-   ```powershell
-   dotnet workload install maui
-   ```
 
 ### Run the Application
 
 ```powershell
-# Build and run
-dotnet build
-dotnet run --project src/LeniTool.UI/LeniTool.UI.csproj
+dotnet run --project src/LeniTool.Desktop/LeniTool.Desktop.csproj
 ```
 
 ### Create Windows Executable
 
 ```powershell
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 ```
 
-The executable will be in: `src/LeniTool.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/LeniTool.UI.exe`
+The executable will be in: `src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish/`
 
 ## Download & Run
 
@@ -79,32 +82,26 @@ dotnet restore
 # Build the solution
 dotnet build
 
-# Run the application
-dotnet run --project src/LeniTool.UI/LeniTool.UI.csproj
+# Run the application (Avalonia Desktop)
+dotnet run --project src/LeniTool.Desktop/LeniTool.Desktop.csproj
 ```
 
 ### Creating a Single-File Executable
 
 For Windows:
 ```bash
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-For macOS (Apple Silicon):
-```bash
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r osx-arm64 --self-contained true -p:PublishSingleFile=true
-```
+The executable will be in: `src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish/`
 
-For Linux:
-```bash
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true
-```
+### Legacy / Experimental MAUI UI
 
-The executable will be in: `src/LeniTool.UI/bin/Release/net8.0-[platform]/[runtime]/publish/`
+There is also a MAUI UI project in `src/LeniTool.UI/`. It is not the main documented workflow and may require installing MAUI workloads.
 
 ## Usage
 
-### Basic Workflow
+### Basic Workflow (Desktop)
 
 1. **Configure Settings** (optional)
    - Click "Expand" on the Configuration section
@@ -121,6 +118,8 @@ The executable will be in: `src/LeniTool.UI/bin/Release/net8.0-[platform]/[runti
    - Output files will be saved to the configured output directory
 
 ### Configuration
+
+LeniTool reads/writes `config.json` using **camelCase** JSON properties.
 
 #### Segmentation Tags
 Tags where the splitter will try to break the file. Listed in priority order:
@@ -160,23 +159,63 @@ Where to save the split files. Can be:
 - Relative path: `output` (relative to executable)
 - Empty: Uses default `Documents/LeniTool/Output`
 
-## Configuration File
+## TXT Markup Splitting (auto-detect + overrides)
 
-Settings are saved in `config.json` next to the executable:
+For `.txt` files that contain tag-like markup (pseudo-XML / pseudo-HTML), LeniTool can split on a repeating **record tag**.
+
+**How auto-detection works (high level):** the analyzer scans for tag-like tokens (e.g. `<Record ...>` / `</Record>`), counts repetitions, checks open/close balance, and ranks candidates by a confidence score. The top candidate is used when `autoDetectRecordTag` is enabled and `recordTagName` is not set.
+
+**Override options:**
+- Desktop UI: use the Analysis / Overrides panel to turn off auto-detect and enter a `recordTagName`.
+- Config: set global defaults, per-extension defaults, and/or per-file overrides.
+
+### Example `.txt` input
+
+```text
+<Envelope>
+   <Header>...</Header>
+
+   <Ficher>
+      <Id>1</Id>
+      <Name>Alice</Name>
+   </Ficher>
+
+   <Ficher>
+      <Id>2</Id>
+      <Name>Bob</Name>
+   </Ficher>
+
+   <Footer>...</Footer>
+</Envelope>
+```
+
+### Config snippet: per-extension + per-file overrides
 
 ```json
 {
-  "maxChunkSizeMB": 4.5,
-  "segmentationTags": ["<section", "<div"],
-  "closingTags": ["</body>", "</html>"],
-  "openingTags": ["<html>", "<body>"],
-  "namingPattern": "{filename}_part{number}.html",
-  "outputDirectory": "output",
-  "maxParallelFiles": 4
+   "maxChunkSizeMB": 4.5,
+   "autoDetectRecordTag": true,
+   "recordTagName": null,
+
+   "extensionProfiles": {
+      ".txt": {
+         "autoDetectRecordTag": false,
+         "recordTagName": "Ficher"
+      }
+   },
+
+   "fileOverrides": {
+      "C:\\data\\special-case.txt": {
+         "autoDetectRecordTag": false,
+         "recordTagName": "Record"
+      }
+   }
 }
 ```
 
-You can edit this file directly or use the in-app configuration interface.
+Notes:
+- Extension keys may be stored as `.txt` or `txt` (both are accepted).
+- File override keys should be full paths; LeniTool normalizes paths when resolving overrides.
 
 ## Project Structure
 
@@ -186,7 +225,8 @@ LeniTool/
 │   ├── LeniTool.Core/           # Business logic library
 │   │   ├── Models/              # Data models
 │   │   └── Services/            # Core services
-│   └── LeniTool.UI/             # MAUI application
+│   ├── LeniTool.Desktop/        # Avalonia Desktop application (primary)
+│   └── LeniTool.UI/             # MAUI UI (legacy/experimental)
 │       ├── ViewModels/          # MVVM ViewModels
 │       ├── Converters/          # Value converters
 │       └── Resources/           # UI resources
@@ -196,12 +236,10 @@ LeniTool/
 
 ## How It Works
 
-1. **File Reading**: The file is read entirely into memory
-2. **Size Check**: If under the limit, no splitting occurs
-3. **Split Point Detection**: The algorithm searches for configured tags near the target chunk size
-4. **Chunk Creation**: Content is split at optimal points
-5. **Tag Balancing**: Opening/closing tags are added to maintain valid HTML
-6. **File Writing**: Chunks are written with numbered filenames
+1. **Strategy selection**: based on file extension (`.html/.htm`, `.txt`, `.pdf` placeholder)
+2. **Size check**: if under the max chunk size, no split is performed
+3. **Analysis (when applicable)**: detects candidates / wrapper boundaries (TXT markup) and estimates parts
+4. **Split**: produces output parts based on the strategy’s boundaries (HTML tags or record spans)
 
 The splitter uses a smart algorithm that:
 - Prioritizes higher-priority segmentation tags
@@ -217,8 +255,12 @@ The splitter uses a smart algorithm that:
 
 ### Files aren't being split
 - Verify the file is larger than the configured chunk size
-- Check that segmentation tags exist in the HTML
+- For HTML: check that segmentation tags exist in the input
+- For TXT markup: ensure there is a repeating record tag, or configure `recordTagName`
 - Review the log output for error messages
+
+### PDF files
+PDF support is currently **not implemented**. Attempting to split a `.pdf` will throw an exception.
 
 ### Chunks are too large/small
 - Adjust the "Max Chunk Size" setting
