@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading;
@@ -22,6 +23,7 @@ public class MainViewModel : ReactiveObject
     private bool _isConfigExpanded = true;
     private string _statusText = "Ready";
     private FileItemViewModel? _selectedFile;
+    private string? _lastResolvedOutputDirectory;
 
     public MainViewModel()
     {
@@ -36,6 +38,8 @@ public class MainViewModel : ReactiveObject
         ClearFilesCommand = ReactiveCommand.Create(() => Files.Clear());
         ProcessFilesCommand = ReactiveCommand.CreateFromTask(async () => await ProcessFilesAsync());
         ToggleConfigCommand = ReactiveCommand.Create(() => { IsConfigExpanded = !IsConfigExpanded; });
+
+        OpenOutputFolderCommand = ReactiveCommand.Create(OpenOutputFolder);
 
         var hasSelection = this.WhenAnyValue(x => x.SelectedFile).Select(f => f is not null);
         AnalyzeSelectedFileCommand = ReactiveCommand.CreateFromTask(AnalyzeSelectedFileAsync, hasSelection);
@@ -180,6 +184,12 @@ public class MainViewModel : ReactiveObject
     public ObservableCollection<FileItemViewModel> Files { get; }
     public ObservableCollection<string> LogEntries { get; }
 
+    public string? LastResolvedOutputDirectory
+    {
+        get => _lastResolvedOutputDirectory;
+        private set => this.RaiseAndSetIfChanged(ref _lastResolvedOutputDirectory, value);
+    }
+
     #endregion
 
     #region Commands
@@ -189,6 +199,8 @@ public class MainViewModel : ReactiveObject
     public ReactiveCommand<Unit, Unit> ClearFilesCommand { get; }
     public ReactiveCommand<Unit, Unit> ProcessFilesCommand { get; }
     public ReactiveCommand<Unit, Unit> ToggleConfigCommand { get; }
+
+    public ReactiveCommand<Unit, Unit> OpenOutputFolderCommand { get; }
 
     public ReactiveCommand<Unit, Unit> AnalyzeSelectedFileCommand { get; }
     public ReactiveCommand<Unit, Unit> SaveSelectedFileOverrideCommand { get; }
@@ -333,9 +345,14 @@ public class MainViewModel : ReactiveObject
 
         try
         {
-            var outputDir = string.IsNullOrWhiteSpace(OutputDirectory) || !Path.IsPathRooted(OutputDirectory)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LeniTool", "Output")
-                : OutputDirectory;
+            var outputDir = ResolveOutputDirectory(OutputDirectory);
+
+            LastResolvedOutputDirectory = outputDir;
+
+            AddLog($"Output directory setting: {(string.IsNullOrWhiteSpace(OutputDirectory) ? "(empty)" : OutputDirectory)}");
+            AddLog($"Output directory (resolved): {outputDir}");
+            if (!string.IsNullOrWhiteSpace(OutputDirectory) && !Path.IsPathRooted(OutputDirectory))
+                AddLog($"(relative to executable): {AppContext.BaseDirectory}");
 
             ApplyRunOverridesFromUi();
 
@@ -375,7 +392,25 @@ public class MainViewModel : ReactiveObject
 
                 if (result.Success)
                 {
+                    var outputDirectories = result.OutputFiles
+                        .Select(p => Path.GetDirectoryName(p) ?? string.Empty)
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    var outputDirUsed = outputDirectories.Count == 1 ? outputDirectories[0] : outputDir;
                     AddLog($"✓ {Path.GetFileName(result.OriginalFilePath)}: {result.ChunkCount} chunks in {result.ProcessingTime.TotalSeconds:F2}s");
+                    AddLog($"  Output folder: {outputDirUsed}");
+
+                    if (result.OutputFiles.Count > 0)
+                    {
+                        var first = Path.GetFileName(result.OutputFiles[0]);
+                        var last = Path.GetFileName(result.OutputFiles[^1]);
+                        AddLog($"  Output names: {first}{(result.OutputFiles.Count > 1 ? $" ... {last}" : string.Empty)}");
+                    }
+
+                    if (outputDirectories.Count > 1)
+                        AddLog($"  Note: outputs span multiple folders ({outputDirectories.Count}).");
                 }
                 else
                 {
@@ -396,6 +431,47 @@ public class MainViewModel : ReactiveObject
         {
             IsBusy = false;
         }
+    }
+
+    private void OpenOutputFolder()
+    {
+        try
+        {
+            var dir = !string.IsNullOrWhiteSpace(LastResolvedOutputDirectory)
+                ? LastResolvedOutputDirectory
+                : ResolveOutputDirectory(OutputDirectory);
+
+            Directory.CreateDirectory(dir);
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = dir,
+                UseShellExecute = true
+            });
+
+            AddLog($"Opened output folder: {dir}");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Failed to open output folder: {ex.Message}");
+        }
+    }
+
+    private static string ResolveOutputDirectory(string? outputDirectorySetting)
+    {
+        if (string.IsNullOrWhiteSpace(outputDirectorySetting))
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "LeniTool",
+                "Output");
+        }
+
+        if (Path.IsPathRooted(outputDirectorySetting))
+            return Path.GetFullPath(outputDirectorySetting);
+
+        // Relative output paths are resolved relative to the executable location.
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, outputDirectorySetting));
     }
 
     private async Task AnalyzeSelectedFileAsync()
@@ -555,8 +631,9 @@ public class FileItemViewModel : ReactiveObject
     private bool _isAnalyzing;
     private bool _isRejected;
     private double _overrideMaxChunkSizeMb = 4.5;
-    private bool _overrideAutoDetectRecordTag = true;
+    private bool? _overrideAutoDetectRecordTag = true;
     private string _overrideRecordTagName = string.Empty;
+    private string _overrideNamingPattern = string.Empty;
 
     public string FileName { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
@@ -710,7 +787,7 @@ public class FileItemViewModel : ReactiveObject
         }
     }
 
-    public bool OverrideAutoDetectRecordTag
+    public bool? OverrideAutoDetectRecordTag
     {
         get => _overrideAutoDetectRecordTag;
         set
@@ -726,7 +803,13 @@ public class FileItemViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _overrideRecordTagName, value);
     }
 
-    public bool IsManualRecordTag => !OverrideAutoDetectRecordTag;
+    public string OverrideNamingPattern
+    {
+        get => _overrideNamingPattern;
+        set => this.RaiseAndSetIfChanged(ref _overrideNamingPattern, value);
+    }
+
+    public bool IsManualRecordTag => !(OverrideAutoDetectRecordTag ?? true);
 
     public int EstimatedPartCount
     {
@@ -829,15 +912,18 @@ public class FileItemViewModel : ReactiveObject
         OverrideMaxChunkSizeMB = resolved.MaxChunkSizeMB;
         OverrideAutoDetectRecordTag = resolved.AutoDetectRecordTag;
         OverrideRecordTagName = resolved.RecordTagName ?? string.Empty;
+        // Leave OverrideNamingPattern empty by default; empty means "use global/effective".
     }
 
     public SplitConfigurationOverrides ToOverrides()
     {
+        var autoDetectRecordTag = OverrideAutoDetectRecordTag ?? true;
         return new SplitConfigurationOverrides
         {
             MaxChunkSizeMB = OverrideMaxChunkSizeMB,
-            AutoDetectRecordTag = OverrideAutoDetectRecordTag,
-            RecordTagName = OverrideAutoDetectRecordTag ? null : (OverrideRecordTagName ?? string.Empty).Trim()
+            NamingPattern = string.IsNullOrWhiteSpace(OverrideNamingPattern) ? null : OverrideNamingPattern.Trim(),
+            AutoDetectRecordTag = autoDetectRecordTag,
+            RecordTagName = autoDetectRecordTag ? null : (OverrideRecordTagName ?? string.Empty).Trim()
         };
     }
 }

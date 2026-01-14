@@ -12,7 +12,8 @@
 			"/^powershell -ExecutionPolicy Bypass -File \\.\\\\Example\\\\generate-examples\\.ps1 -TargetSizeMB 1 -Variant txt-nested-envelope-basic$/": {
 				"approve": true,
 				"matchCommandLine": true
-			}
+			},
+			"dotnet clean": true
 		}
 	}
 }

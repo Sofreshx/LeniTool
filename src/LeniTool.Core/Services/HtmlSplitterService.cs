@@ -46,6 +46,8 @@ public class HtmlSplitterService : ISplitterStrategy
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
 
+        var resolved = _config.ResolveForFile(filePath);
+
         // Read entire file
         var content = await File.ReadAllTextAsync(filePath, Encoding.UTF8);
         var fileInfo = new FileInfo(filePath);
@@ -76,13 +78,12 @@ public class HtmlSplitterService : ISplitterStrategy
         for (int i = 0; i < chunks.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
-            var outputFileName = _config.NamingPattern
-                .Replace("{filename}", fileName)
-                .Replace("{number}", (i + 1).ToString("D3"));
-            
-            if (!outputFileName.EndsWith(extension))
-                outputFileName += extension;
+
+            var outputFileName = OutputFileNamer.BuildPartFileName(
+                resolved.NamingPattern,
+                filePath,
+                partNumber: i + 1,
+                partNumberDigits: 3);
 
             var outputPath = Path.Combine(outputDirectory, outputFileName);
             await File.WriteAllTextAsync(outputPath, chunks[i], Encoding.UTF8, cancellationToken);

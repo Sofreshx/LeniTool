@@ -74,6 +74,56 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void OnBrowseOutputDirectoryClicked(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (DataContext is not MainViewModel vm)
+                return;
+
+            var storageProvider = TopLevel.GetTopLevel(this)?.StorageProvider;
+            if (storageProvider is null)
+            {
+                vm.AddLogPublic("Folder picker unavailable (no StorageProvider)");
+                return;
+            }
+
+            IStorageFolder? startFolder = null;
+            if (!string.IsNullOrWhiteSpace(vm.OutputDirectory))
+            {
+                try
+                {
+                    var currentPath = Path.GetFullPath(vm.OutputDirectory);
+                    if (Directory.Exists(currentPath))
+                        startFolder = await storageProvider.TryGetFolderFromPathAsync(currentPath);
+                }
+                catch
+                {
+                    // Ignore invalid paths; we'll just let the picker decide the start location.
+                }
+            }
+
+            var folders = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Select output directory",
+                AllowMultiple = false,
+                SuggestedStartLocation = startFolder
+            });
+
+            var selectedFolder = folders.FirstOrDefault();
+            var selectedPath = selectedFolder?.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(selectedPath))
+                return;
+
+            vm.OutputDirectory = selectedPath;
+        }
+        catch (Exception ex)
+        {
+            if (DataContext is MainViewModel vm)
+                vm.AddLogPublic($"Browse output directory failed: {ex.Message}");
+        }
+    }
+
     private void OnWindowDragEnter(object? sender, DragEventArgs e)
     {
         _dragDepth++;

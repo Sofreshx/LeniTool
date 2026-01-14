@@ -25,6 +25,7 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                     <Button Content="Add Files" Click="OnAddFilesClicked" Classes="ghost" />
                     <Button Content="Clear All" Command="{Binding ClearFilesCommand}" Classes="ghost" />
+                    <Button Content="Open Output" Command="{Binding OpenOutputFolderCommand}" Classes="ghost" />
                     <Button Content="Process Files" Command="{Binding ProcessFilesCommand}" Classes="primary" />
                 </StackPanel>
             </Grid>
@@ -119,7 +120,7 @@
                             <TextBox Grid.Column="0"
                                      Text="{Binding OutputDirectory}"
                                      Watermark="Auto (Documents/LeniTool/Output)"/>
-                            <Button Grid.Column="1" Content="Browse" Margin="10,0,0,0" Classes="ghost"/>
+                            <Button Grid.Column="1" Content="Browse" Margin="10,0,0,0" Classes="ghost" Click="OnBrowseOutputDirectoryClicked"/>
                         </Grid>
 
                         <!-- Max Parallel Files -->
@@ -228,6 +229,10 @@
                                         <TextBlock Text="Record tag (manual)" FontSize="12" FontWeight="Bold"/>
                                         <TextBox Text="{Binding SelectedFile.OverrideRecordTagName}"
                                                  IsEnabled="{Binding SelectedFile.IsManualRecordTag}"/>
+
+                                        <TextBlock Text="Naming pattern (override)" FontSize="12" FontWeight="Bold"/>
+                                        <TextBox Text="{Binding SelectedFile.OverrideNamingPattern}"
+                                                 Watermark="(blank = use global)  e.g. {filename}_part{number}.txt"/>
 
                                         <TextBlock Text="Target size (MB)" FontSize="12" FontWeight="Bold"/>
                                         <NumericUpDown Value="{Binding SelectedFile.OverrideMaxChunkSizeMB}"

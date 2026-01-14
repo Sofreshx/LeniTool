@@ -228,9 +228,9 @@ public class SplitConfiguration
             return false;
         }
 
-        if (!NamingPattern.Contains("{filename}") || !NamingPattern.Contains("{number}"))
+        if (!NamingPattern.Contains("{filename}"))
         {
-            errorMessage = "Naming pattern must contain {filename} and {number}";
+            errorMessage = "Naming pattern must contain {filename}";
             return false;
         }
 
@@ -240,11 +240,7 @@ public class SplitConfiguration
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(OutputDirectory))
-        {
-            errorMessage = "Output directory cannot be empty";
-            return false;
-        }
+        // OutputDirectory can be empty (means: use default output folder).
 
         errorMessage = string.Empty;
         return true;

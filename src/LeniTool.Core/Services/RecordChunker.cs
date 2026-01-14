@@ -135,11 +135,11 @@ public sealed class RecordChunker
 
             var newPart = currentPart + 1;
 
-            var outputFileName = config.NamingPattern
-                .Replace("{filename}", fileName)
-                .Replace("{number}", newPart.ToString("D3"));
-
-            outputFileName = Path.ChangeExtension(outputFileName, extension);
+            var outputFileName = OutputFileNamer.BuildPartFileName(
+                config.NamingPattern,
+                filePath,
+                partNumber: newPart,
+                partNumberDigits: 3);
 
             var outputPath = Path.Combine(outputDirectory, outputFileName);
 
