@@ -4,21 +4,18 @@
 
 ### Windows (Only Platform Supported)
 ```powershell
-# Install MAUI workload (one-time)
-dotnet workload install maui
-
 # Debug build
 dotnet build
 
-# Release build with single-file executable
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj `
+# Release build with single-file executable (Windows)
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj `
   -c Release `
   -r win-x64 `
   --self-contained true `
   -p:PublishSingleFile=true `
   -p:IncludeNativeLibrariesForSelfExtract=true
 
-# Output: src/LeniTool.UI/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish/LeniTool.UI.exe
+# Output: src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish/LeniTool.Desktop.exe
 ```
 
 **Note:** This is a Windows-only application. macOS and Linux are not supported.
@@ -26,19 +23,19 @@ dotnet publish src/LeniTool.UI/LeniTool.UI.csproj `
 ### macOS (Apple Silicon)
 ```bash
 # Release build with single-file executable
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj \
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj \
   -c Release \
   -r osx-arm64 \
   --self-contained true \
   -p:PublishSingleFile=true \
   -p:PublishTrimmed=false
 
-# Output: src/LeniTool.UI/bin/Release/net8.0-maccatalyst/osx-arm64/publish/LeniTool.UI.app
+# Output: src/LeniTool.Desktop/bin/Release/net8.0-maccatalyst/osx-arm64/publish/LeniTool.Desktop.app
 ```
 
 ### macOS (Intel)
 ```bash
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj \
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj \
   -c Release \
   -r osx-x64 \
   --self-contained true \
@@ -49,14 +46,14 @@ dotnet publish src/LeniTool.UI/LeniTool.UI.csproj \
 ### Linux
 ```bash
 # Release build with single-file executable
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj \
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj \
   -c Release \
   -r linux-x64 \
   --self-contained true \
   -p:PublishSingleFile=true \
   -p:PublishTrimmed=false
 
-# Output: src/LeniTool.UI/bin/Release/net8.0-android/linux-x64/publish/LeniTool.UI
+# Output: src/LeniTool.Desktop/bin/Release/net8.0-android/linux-x64/publish/LeniTool.Desktop
 ```
 
 ## Build Options Explained
@@ -89,7 +86,7 @@ After building, create a distribution package:
 New-Item -ItemType Directory -Force -Path "dist\windows"
 
 # Copy executable
-Copy-Item "src\LeniTool.UI\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\LeniTool.UI.exe" "dist\windows\"
+Copy-Item "src\LeniTool.Desktop\bin\Release\net8.0-windows\win-x64\publish\LeniTool.Desktop.exe" "dist\windows\"
 
 # Copy config template
 Copy-Item "config.template.json" "dist\windows\config.json"
@@ -107,7 +104,7 @@ Compress-Archive -Path "dist\windows\*" -DestinationPath "dist\LeniTool-win-x64.
 mkdir -p dist/macos
 
 # Copy executable
-cp -r src/LeniTool.UI/bin/Release/net8.0-maccatalyst/osx-arm64/publish/LeniTool.UI.app dist/macos/
+cp -r src/LeniTool.Desktop/bin/Release/net8.0-maccatalyst/osx-arm64/publish/LeniTool.Desktop.app dist/macos/
 
 # Copy config template
 cp config.template.json dist/macos/config.json
@@ -123,10 +120,10 @@ cd dist && tar -czf LeniTool-osx-arm64.tar.gz macos/
 
 ```bash
 # Run the published executable
-./src/LeniTool.UI/bin/Release/[target-framework]/[runtime]/publish/LeniTool.UI
+./src/LeniTool.Desktop/bin/Release/[target-framework]/[runtime]/publish/LeniTool.Desktop
 
 # Or on Windows
-.\src\LeniTool.UI\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\LeniTool.UI.exe
+.\src\LeniTool.Desktop\bin\Release\net8.0-windows\win-x64\publish\LeniTool.Desktop.exe
 ```
 
 ## Troubleshooting
@@ -140,13 +137,10 @@ cd dist && tar -czf LeniTool-osx-arm64.tar.gz macos/
 
 ### Permission denied (macOS/Linux)
 ```bash
-chmod +x ./path/to/LeniTool.UI
+chmod +x ./path/to/LeniTool.Desktop
 ```
 
-### Missing MAUI workload
-```bash
-dotnet workload install maui
-```
+
 
 ## Size Optimization
 
@@ -191,24 +185,21 @@ jobs:
         with:
           dotnet-version: 8.0.x
           
-      - name: Install MAUI
-        run: dotnet workload install maui
-        
       - name: Publish (Windows)
         if: matrix.os == 'windows-latest'
-        run: dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+        run: dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
         
       - name: Publish (macOS)
         if: matrix.os == 'macos-latest'
-        run: dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true
+        run: dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true
         
       - name: Publish (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true
+        run: dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true
         
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: release-${{ matrix.os }}
-          path: src/LeniTool.UI/bin/Release/**/publish/
+          path: src/LeniTool.Desktop/bin/Release/**/publish/
 ```

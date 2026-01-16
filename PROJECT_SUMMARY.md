@@ -4,7 +4,7 @@
 
 ### What Was Built
 
-A complete, production-ready .NET MAUI application for splitting large HTML files (RSP - "retour sur prestation") into smaller chunks while preserving HTML structure.
+A complete, production-ready Avalonia Desktop application for splitting large HTML files (RSP - "retour sur prestation") into smaller chunks while preserving HTML structure.
 
 ## Project Structure
 
@@ -20,13 +20,12 @@ LeniTool/
 │   │       ├── HtmlSplitterService.cs       # Core splitting logic
 │   │       └── FileProcessingService.cs     # Batch & parallel processing
 │   │
-│   └── LeniTool.UI/                # MAUI application
+│   └── LeniTool.Desktop/             # Avalonia Desktop application
 │       ├── ViewModels/
 │       │   └── MainViewModel.cs             # MVVM ViewModel
-│       ├── Converters/
-│       │   └── ValueConverters.cs           # UI converters
+│       ├── Views/
+│       │   └── MainWindow.xaml              # Main UI
 │       ├── Resources/                       # UI assets
-│       ├── MainPage.xaml                    # Main UI
 │       └── Configuration files
 │
 ├── tests/
@@ -57,7 +56,7 @@ LeniTool/
 - **Efficient Memory Usage**: Handles large files gracefully
 
 ### ✅ User Interface
-- **Modern MAUI UI**: Clean, intuitive interface
+- **Modern Desktop UI (Avalonia)**: Clean, intuitive interface
 - **Drag & Drop Support**: Easy file selection
 - **Collapsible Configuration**: Hide/show advanced settings
 - **Real-time Logging**: See what's happening as it happens
@@ -78,7 +77,7 @@ LeniTool/
 ## Technology Stack
 
 - **.NET 8.0**: Latest .NET framework
-- **.NET MAUI**: Modern cross-platform UI framework
+- **Avalonia**: Cross-platform desktop UI framework
 - **CommunityToolkit.Mvvm**: MVVM helpers
 - **System.Text.Json**: Configuration serialization
 - **xUnit + Shouldly**: Testing framework
@@ -93,7 +92,7 @@ LeniTool/
 
 ### Design Patterns
 - **MVVM**: Model-View-ViewModel for UI
-- **Dependency Injection**: Built-in MAUI DI container
+- **Dependency Injection**: Built-in DI container (hosted services)
 - **Service Pattern**: Encapsulated business logic
 - **Repository Pattern**: Configuration persistence
 - **Progress Reporting**: IProgress<T> for async feedback
@@ -157,12 +156,12 @@ LeniTool/
 ### Quick Development
 ```bash
 dotnet build
-dotnet run --project src/LeniTool.UI/LeniTool.UI.csproj
+dotnet run --project src/LeniTool.Desktop/LeniTool.Desktop.csproj
 ```
 
 ### Release Build (Windows)
 ```bash
-dotnet publish src/LeniTool.UI/LeniTool.UI.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
 ```
 
 ### Run Tests
@@ -199,14 +198,14 @@ dotnet test
 ✅ **Configurable chunk size**: MaxChunkSizeMB setting
 ✅ **Configurable segmentation**: SegmentationTags list
 ✅ **Configurable closing tags**: ClosingTags and OpeningTags
-✅ **Clean UI**: Modern MAUI interface with clear sections
+✅ **Clean UI**: Modern Desktop (Avalonia) interface with clear sections
 ✅ **File selection**: Add Files button + drag & drop support
 ✅ **Output display**: Real-time logging and progress
 ✅ **Easy to use**: Single executable, no installation
 ✅ **Batch processing**: Multiple files at once
 ✅ **Parallel execution**: Configurable parallel processing
 ✅ **Proper HTML chunks**: Tag balancing ensures valid HTML
-✅ **.NET focused**: Pure .NET 8 + MAUI solution
+✅ **.NET focused**: Pure .NET 8 solution (Avalonia Desktop)
 
 ## Phase 6: Quality Review - Ready
 

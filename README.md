@@ -2,7 +2,7 @@
 
 LeniTool is a Windows desktop application for splitting large files into smaller parts while keeping important structure intact.
 
-The primary app is the **Avalonia Desktop** UI in `src/LeniTool.Desktop/`. A legacy/experimental MAUI UI project still exists in `src/LeniTool.UI/`, but it is not the main documented workflow.
+The primary app is the **Avalonia Desktop** UI in `src/LeniTool.Desktop/`. 
 
 ## Features
 
@@ -12,21 +12,10 @@ The primary app is the **Avalonia Desktop** UI in `src/LeniTool.Desktop/`. A leg
 - **TXT (markup / pseudo-XML)**: splits on whole “record” elements (auto-detected or manually configured)
 - Preserves wrapper/prefix/suffix bytes around records when possible (for TXT markup)
 
-🚀 **High Performance**
-- Parallel file processing
-- Handles multiple files simultaneously
-- Progress tracking for each file
-
 ⚙️ **Flexible Configuration**
 - Persistent `config.json` (auto-created next to the executable on first run)
 - Global defaults + per-extension profiles + per-file overrides
 - Manual override of record-tag detection from the Desktop UI
-
-🎨 **Modern UI**
-- Clean, intuitive interface
-- Drag & drop file support
-- Real-time progress tracking
-- Detailed logging
 
 ## Supported File Types
 
@@ -95,9 +84,7 @@ dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj -c Release -r win-x6
 
 The executable will be in: `src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish/`
 
-### Legacy / Experimental MAUI UI
 
-There is also a MAUI UI project in `src/LeniTool.UI/`. It is not the main documented workflow and may require installing MAUI workloads.
 
 ## Usage
 
@@ -226,10 +213,7 @@ LeniTool/
 │   │   ├── Models/              # Data models
 │   │   └── Services/            # Core services
 │   ├── LeniTool.Desktop/        # Avalonia Desktop application (primary)
-│   └── LeniTool.UI/             # MAUI UI (legacy/experimental)
-│       ├── ViewModels/          # MVVM ViewModels
-│       ├── Converters/          # Value converters
-│       └── Resources/           # UI resources
+
 └── tests/
     └── LeniTool.Core.Tests/     # Unit tests
 ```
@@ -285,7 +269,7 @@ The project is structured for easy extension:
 
 - **Core Logic**: Add to `LeniTool.Core/Services/`
 - **Models**: Add to `LeniTool.Core/Models/`
-- **UI**: Add to `LeniTool.UI/ViewModels/` or `LeniTool.UI/`
+- **UI**: Add to `LeniTool.Desktop/ViewModels/` or `LeniTool.Desktop/`
 
 ### Contributing
 
@@ -307,5 +291,5 @@ For issues, questions, or feature requests, please open an issue on GitHub.
 
 Built with:
 - .NET 8.0
-- .NET MAUI
+
 - CommunityToolkit.Mvvm

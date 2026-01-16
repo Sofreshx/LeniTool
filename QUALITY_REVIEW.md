@@ -15,8 +15,8 @@ A comprehensive code review was conducted using the code-reviewer agent. Multipl
 **Status:** ✅ Fixed
 
 **Changes:**
-- Added converter registrations to [App.xaml](src/LeniTool.UI/App.xaml)
-- All three converters now properly registered in resource dictionary
+- Added converter registrations to [App.axaml](src/LeniTool.Desktop/App.axaml)
+- All three converters now properly registered in the application resources
 
 ```xml
 <converters:BoolToExpandCollapseConverter x:Key="BoolToExpandCollapseConverter"/>
@@ -97,8 +97,8 @@ LoadConfigCommand = new Command(async () =>
 **Status:** ✅ Fixed
 
 **Changes:**
-- Removed converter registrations from [Styles.xaml](src/LeniTool.UI/Resources/Styles/Styles.xaml)
-- Kept only in [App.xaml](src/LeniTool.UI/App.xaml) (proper location)
+- Removed duplicate converter registrations from [Theme.axaml](src/LeniTool.Desktop/Styles/Theme.axaml)
+- Kept only in [App.axaml](src/LeniTool.Desktop/App.axaml) (proper location)
 
 ---
 

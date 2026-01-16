@@ -7,10 +7,10 @@
 **Solution:** Updated to version 9.0.1 (latest stable)  
 **File:** [LeniTool.Core.csproj](src/LeniTool.Core/LeniTool.Core.csproj)
 
-### 2. MAUI Complexity & CS5001 Error
-**Problem:** MAUI requires Android/iOS workloads which aren't needed for your use case  
-**Solution:** Use the **CLI version** instead (already created by another agent)  
-**Benefit:** No platform dependencies, simpler, perfect for automation
+### 2. Legacy MAUI UI & Replacement
+**Problem:** The legacy MAUI UI added platform complexity and required extra workloads which aren't needed for this project  
+**Solution:** Replaced with a focused Avalonia Desktop UI and a CLI version (already created)  
+**Benefit:** No platform dependencies, simpler to build and distribute, and suitable for automation
 
 ## How to Run Now
 
@@ -72,17 +72,14 @@ This should:
 
 ## If You Still Want the GUI
 
-The MAUI GUI is still available but requires additional setup:
+The GUI is available as an Avalonia Desktop app in `src/LeniTool.Desktop/`.
 
 ```powershell
-# One-time: Install MAUI workload
-dotnet workload install maui
-
-# Run GUI (specify framework)
-dotnet run --project src/LeniTool.UI/LeniTool.UI.csproj -f net8.0-windows10.0.19041.0
+# Run the desktop GUI (development)
+dotnet run --project src/LeniTool.Desktop/LeniTool.Desktop.csproj
 ```
 
-**Recommendation:** Start with CLI. It's simpler and does everything you need.
+**Recommendation:** Start with CLI or use the Desktop GUI for interactive use.
 
 ## Next Steps
 

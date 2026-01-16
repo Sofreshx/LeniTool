@@ -9,8 +9,7 @@ Install the .NET 8 SDK:
 - https://dotnet.microsoft.com/download
 
 Notes:
-- The primary app is the Avalonia Desktop UI (`src/LeniTool.Desktop/`) and does not require MAUI workloads.
-- A MAUI UI project exists (`src/LeniTool.UI/`) but is not the recommended starting point.
+- The primary app is the Avalonia Desktop UI (`src/LeniTool.Desktop/`).
 
 ### 2. Build the Application
 
