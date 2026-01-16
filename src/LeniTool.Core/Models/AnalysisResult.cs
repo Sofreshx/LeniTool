@@ -47,4 +47,9 @@ public sealed class AnalysisResult
     /// Estimated number of parts for a target max chunk size.
     /// </summary>
     public int EstimatedPartCount { get; init; }
+
+    /// <summary>
+    /// Summary of all tags detected during analysis.
+    /// </summary>
+    public List<TagSummary> TagSummaries { get; init; } = new();
 }

@@ -55,17 +55,6 @@
                     </Grid>
 
                     <StackPanel Spacing="10" IsVisible="{Binding IsConfigExpanded}">
-                        <!-- Max Chunk Size -->
-                        <TextBlock Text="Max Chunk Size (MB):" FontWeight="Bold"/>
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Slider Value="{Binding MaxChunkSizeMB}"
-                                    Minimum="0.5"
-                                    Maximum="10"
-                                    Width="200"/>
-                            <TextBlock Text="{Binding MaxChunkSizeMB, StringFormat='{}{0:F1} MB'}"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
                         <!-- Input File Size Limits -->
                         <TextBlock Text="Input File Limits" FontWeight="SemiBold" FontSize="14" Margin="0,6,0,0"/>
 
@@ -77,37 +66,6 @@
                                            Increment="0.5"/>
                             <TextBlock Text="0 = no limit" Classes="subtle" VerticalAlignment="Center"/>
                         </StackPanel>
-
-                        <TextBlock Text="Auto-analyze threshold (MB):" FontWeight="Bold"/>
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <NumericUpDown Value="{Binding AutoAnalyzeThresholdMB}"
-                                           Minimum="0"
-                                           Maximum="1048576"
-                                           Increment="10"/>
-                            <TextBlock Text="0 = disable auto-analyze" Classes="subtle" VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Segmentation Tags -->
-                        <TextBlock Text="Segmentation Tags (one per line):" FontWeight="Bold"/>
-                        <TextBox Text="{Binding SegmentationTagsText}"
-                                 Height="100"
-                                 AcceptsReturn="True"
-                                 TextWrapping="NoWrap"
-                                 Watermark="&lt;section&#x0A;&lt;div&#x0A;&lt;article"/>
-
-                        <!-- Opening Tags -->
-                        <TextBlock Text="Opening Tags (added to chunks):" FontWeight="Bold"/>
-                        <TextBox Text="{Binding OpeningTagsText}"
-                                 Height="60"
-                                 AcceptsReturn="True"
-                                 Watermark="&lt;html&gt;&#x0A;&lt;body&gt;"/>
-
-                        <!-- Closing Tags -->
-                        <TextBlock Text="Closing Tags (added to chunks):" FontWeight="Bold"/>
-                        <TextBox Text="{Binding ClosingTagsText}"
-                                 Height="60"
-                                 AcceptsReturn="True"
-                                 Watermark="&lt;/body&gt;&#x0A;&lt;/html&gt;"/>
 
                         <!-- Naming Pattern -->
                         <TextBlock Text="Naming Pattern:" FontWeight="Bold"/>
@@ -122,13 +80,6 @@
                                      Watermark="Auto (Documents/LeniTool/Output)"/>
                             <Button Grid.Column="1" Content="Browse" Margin="10,0,0,0" Classes="ghost" Click="OnBrowseOutputDirectoryClicked"/>
                         </Grid>
-
-                        <!-- Max Parallel Files -->
-                        <TextBlock Text="Max Parallel Files:" FontWeight="Bold"/>
-                        <NumericUpDown Value="{Binding MaxParallelFiles}"
-                                       Minimum="1"
-                                       Maximum="8"
-                                       Increment="1"/>
 
                         <!-- Config Buttons -->
                         <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,10,0,0">
@@ -150,12 +101,11 @@
                     <TextBlock Text="Tip: Drag files onto the list" Classes="subtle" FontSize="12" />
 
                     <Border Classes="listHeader">
-                        <Grid ColumnDefinitions="3*,110,90,160,140">
+                        <Grid ColumnDefinitions="3*,110,90,140">
                             <TextBlock Text="Name" Classes="muted" FontSize="12" />
                             <TextBlock Grid.Column="1" Text="Size" Classes="muted" FontSize="12" Margin="10,0,0,0" />
                             <TextBlock Grid.Column="2" Text="Est Parts" Classes="muted" FontSize="12" Margin="10,0,0,0" />
-                            <TextBlock Grid.Column="3" Text="Top Tag" Classes="muted" FontSize="12" Margin="10,0,0,0" />
-                            <TextBlock Grid.Column="4" Text="Status" Classes="muted" FontSize="12" Margin="10,0,0,0" />
+                            <TextBlock Grid.Column="3" Text="Status" Classes="muted" FontSize="12" Margin="10,0,0,0" />
                         </Grid>
                     </Border>
 
@@ -167,12 +117,11 @@
                              Height="260">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="3*,110,90,160,140">
+                                <Grid ColumnDefinitions="3*,110,90,140">
                                     <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                     <TextBlock Grid.Column="1" Text="{Binding FileSizeShortDisplay}" Classes="muted" Margin="10,0,0,0" />
                                     <TextBlock Grid.Column="2" Text="{Binding EstimatedPartCount}" Classes="muted" Margin="10,0,0,0" />
-                                    <TextBlock Grid.Column="3" Text="{Binding TopCandidateDisplay}" Classes="muted" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
-                                    <Border Grid.Column="4" Classes="badge" HorizontalAlignment="Left" Margin="10,0,0,0"
+                                    <Border Grid.Column="3" Classes="badge" HorizontalAlignment="Left" Margin="10,0,0,0"
                                             Background="{Binding StatusBadgeBackground}">
                                         <TextBlock Text="{Binding StatusBadgeText}" Foreground="{Binding StatusBadgeForeground}" />
                                     </Border>
@@ -221,6 +170,47 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
 
+                                        <TextBlock Text="Tags found" FontWeight="Bold" Margin="0,6,0,0"
+                                                   IsVisible="{Binding SelectedFile.HasTagSummaries}"/>
+                                        <ItemsControl ItemsSource="{Binding SelectedFile.TagSummaries}"
+                                                      IsVisible="{Binding SelectedFile.HasTagSummaries}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,4">
+                                                        <TextBlock Text="{Binding TagName}" FontWeight="SemiBold"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding OpenCount, StringFormat='Open {0}'}" Classes="subtle" Margin="10,0,0,0"/>
+                                                        <TextBlock Grid.Column="2" Text="{Binding CloseCount, StringFormat='Close {0}'}" Classes="subtle" Margin="10,0,0,0"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="Consistency &amp; validity" FontWeight="Bold" Margin="0,6,0,0"/>
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <TextBlock Grid.Column="0" Text="Status:" FontWeight="Bold"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding SelectedFile.AnalysisStatusText}" Margin="8,0,0,0"/>
+                                        </Grid>
+
+                                        <ItemsControl ItemsSource="{Binding SelectedFile.AnalysisIssues}"
+                                                      IsVisible="{Binding SelectedFile.HasAnalysisIssues}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding ., StringFormat='• {0}'}" FontSize="11" Classes="subtle" TextWrapping="Wrap"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="Processed outputs" FontWeight="Bold" Margin="0,6,0,0"
+                                                   IsVisible="{Binding SelectedFile.HasProcessedOutputs}"/>
+                                        <ItemsControl ItemsSource="{Binding SelectedFile.ProcessedOutputFiles}"
+                                                      IsVisible="{Binding SelectedFile.HasProcessedOutputs}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" FontSize="11" Classes="subtle" TextWrapping="Wrap"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
                                         <Separator/>
 
                                         <TextBlock Text="Override" FontWeight="Bold"/>
@@ -242,16 +232,9 @@
 
                                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
                                             <Button Content="Analyze"
-                                                    Command="{Binding AnalyzeSelectedFileCommand}"
-                                                    Classes="ghost"/>
-                                            <Button Content="Save for this file"
-                                                    Command="{Binding SaveSelectedFileOverrideCommand}"
-                                                    Classes="ghost"/>
-                                        </StackPanel>
-
-                                        <Button Content="Save as extension default"
-                                                Command="{Binding SaveSelectedExtensionOverrideCommand}"
+                                                Command="{Binding AnalyzeSelectedFileCommand}"
                                                 Classes="ghost"/>
+                                        </StackPanel>
                                     </StackPanel>
 
                                     <TextBlock Text="Select a file to see details." Classes="subtle" FontSize="12"
@@ -267,10 +250,20 @@
             <StackPanel Spacing="10">
                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                     <TextBlock Text="📊 Status &amp; Log" Classes="h2" />
-                    <TextBlock Grid.Column="1" Text="{Binding StatusText}" Classes="subtle" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding StatusText}" Classes="subtle" VerticalAlignment="Center" />
+                        <Button Content="Hide Log"
+                                Command="{Binding ToggleLogCommand}"
+                                Classes="ghost"
+                                IsVisible="{Binding IsLogExpanded}"/>
+                        <Button Content="Show Log"
+                                Command="{Binding ToggleLogCommand}"
+                                Classes="ghost"
+                                IsVisible="{Binding IsLogCollapsed}"/>
+                    </StackPanel>
                 </Grid>
 
-                <ListBox ItemsSource="{Binding LogEntries}" Height="180">
+                <ListBox ItemsSource="{Binding LogEntries}" Height="180" IsVisible="{Binding IsLogExpanded}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding}" FontSize="11" FontFamily="Consolas"/>

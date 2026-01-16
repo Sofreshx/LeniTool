@@ -20,7 +20,8 @@ public class MainViewModel : ReactiveObject
     private readonly ConfigurationService _configService;
     private SplitConfiguration _configuration;
     private bool _isBusy;
-    private bool _isConfigExpanded = true;
+    private bool _isConfigExpanded = false;
+    private bool _isLogExpanded = false;
     private string _statusText = "Ready";
     private FileItemViewModel? _selectedFile;
     private string? _lastResolvedOutputDirectory;
@@ -38,13 +39,12 @@ public class MainViewModel : ReactiveObject
         ClearFilesCommand = ReactiveCommand.Create(() => Files.Clear());
         ProcessFilesCommand = ReactiveCommand.CreateFromTask(async () => await ProcessFilesAsync());
         ToggleConfigCommand = ReactiveCommand.Create(() => { IsConfigExpanded = !IsConfigExpanded; });
+        ToggleLogCommand = ReactiveCommand.Create(() => { IsLogExpanded = !IsLogExpanded; });
 
         OpenOutputFolderCommand = ReactiveCommand.Create(OpenOutputFolder);
 
         var hasSelection = this.WhenAnyValue(x => x.SelectedFile).Select(f => f is not null);
         AnalyzeSelectedFileCommand = ReactiveCommand.CreateFromTask(AnalyzeSelectedFileAsync, hasSelection);
-        SaveSelectedFileOverrideCommand = ReactiveCommand.CreateFromTask(SaveSelectedFileOverrideAsync, hasSelection);
-        SaveSelectedExtensionOverrideCommand = ReactiveCommand.CreateFromTask(SaveSelectedExtensionOverrideAsync, hasSelection);
 
         _ = LoadConfigurationAsync();
     }
@@ -161,6 +161,18 @@ public class MainViewModel : ReactiveObject
         set => this.RaiseAndSetIfChanged(ref _isConfigExpanded, value);
     }
 
+    public bool IsLogExpanded
+    {
+        get => _isLogExpanded;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isLogExpanded, value);
+            this.RaisePropertyChanged(nameof(IsLogCollapsed));
+        }
+    }
+
+    public bool IsLogCollapsed => !IsLogExpanded;
+
     public string StatusText
     {
         get => _statusText;
@@ -199,12 +211,11 @@ public class MainViewModel : ReactiveObject
     public ReactiveCommand<Unit, Unit> ClearFilesCommand { get; }
     public ReactiveCommand<Unit, Unit> ProcessFilesCommand { get; }
     public ReactiveCommand<Unit, Unit> ToggleConfigCommand { get; }
+    public ReactiveCommand<Unit, Unit> ToggleLogCommand { get; }
 
     public ReactiveCommand<Unit, Unit> OpenOutputFolderCommand { get; }
 
     public ReactiveCommand<Unit, Unit> AnalyzeSelectedFileCommand { get; }
-    public ReactiveCommand<Unit, Unit> SaveSelectedFileOverrideCommand { get; }
-    public ReactiveCommand<Unit, Unit> SaveSelectedExtensionOverrideCommand { get; }
 
     #endregion
 
@@ -345,14 +356,14 @@ public class MainViewModel : ReactiveObject
 
         try
         {
-            var outputDir = ResolveOutputDirectory(OutputDirectory);
+            var outputDir = ResolveOutputDirectory(OutputDirectory, out var relativeBaseUsed);
 
             LastResolvedOutputDirectory = outputDir;
 
             AddLog($"Output directory setting: {(string.IsNullOrWhiteSpace(OutputDirectory) ? "(empty)" : OutputDirectory)}");
             AddLog($"Output directory (resolved): {outputDir}");
-            if (!string.IsNullOrWhiteSpace(OutputDirectory) && !Path.IsPathRooted(OutputDirectory))
-                AddLog($"(relative to executable): {AppContext.BaseDirectory}");
+            if (!string.IsNullOrWhiteSpace(OutputDirectory) && !Path.IsPathRooted(OutputDirectory) && !string.IsNullOrWhiteSpace(relativeBaseUsed))
+                AddLog($"(relative to: {relativeBaseUsed})");
 
             ApplyRunOverridesFromUi();
 
@@ -368,10 +379,18 @@ public class MainViewModel : ReactiveObject
                 StatusText = p.Status;
             });
 
+            var alreadyProcessed = Files
+                .Where(f => f.IsProcessed)
+                .Select(f => f.FileName)
+                .ToList();
+
             var filePaths = Files
-                .Where(f => !f.IsRejected)
+                .Where(f => !f.IsRejected && !f.IsProcessed)
                 .Select(f => f.FilePath)
                 .ToList();
+
+            if (alreadyProcessed.Count > 0)
+                AddLog($"Skipped {alreadyProcessed.Count} already processed file(s) this session.");
 
             if (filePaths.Count == 0)
             {
@@ -386,8 +405,18 @@ public class MainViewModel : ReactiveObject
                 var file = Files.FirstOrDefault(f => f.FilePath == result.OriginalFilePath);
                 if (file != null)
                 {
-                    file.Status = result.Success ? $"Complete - {result.ChunkCount} chunks" : $"Error: {result.ErrorMessage}";
-                    file.Progress = result.Success ? 100 : 0;
+                    if (result.Success)
+                    {
+                        file.Status = "Processed";
+                        file.Progress = 100;
+                        file.IsProcessed = true;
+                        file.SetProcessedOutputs(result.OutputFiles);
+                    }
+                    else
+                    {
+                        file.Status = $"Error: {result.ErrorMessage}";
+                        file.Progress = 0;
+                    }
                 }
 
                 if (result.Success)
@@ -439,7 +468,7 @@ public class MainViewModel : ReactiveObject
         {
             var dir = !string.IsNullOrWhiteSpace(LastResolvedOutputDirectory)
                 ? LastResolvedOutputDirectory
-                : ResolveOutputDirectory(OutputDirectory);
+                : ResolveOutputDirectory(OutputDirectory, out _);
 
             Directory.CreateDirectory(dir);
 
@@ -457,8 +486,9 @@ public class MainViewModel : ReactiveObject
         }
     }
 
-    private static string ResolveOutputDirectory(string? outputDirectorySetting)
+    private static string ResolveOutputDirectory(string? outputDirectorySetting, out string? relativeBaseUsed)
     {
+        relativeBaseUsed = null;
         if (string.IsNullOrWhiteSpace(outputDirectorySetting))
         {
             return Path.Combine(
@@ -470,8 +500,51 @@ public class MainViewModel : ReactiveObject
         if (Path.IsPathRooted(outputDirectorySetting))
             return Path.GetFullPath(outputDirectorySetting);
 
-        // Relative output paths are resolved relative to the executable location.
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, outputDirectorySetting));
+        // Relative output paths: try repo root (if present), then current directory, then executable.
+        var bases = new List<string>();
+        var repoRoot = FindRepoRoot(AppContext.BaseDirectory);
+        if (!string.IsNullOrWhiteSpace(repoRoot))
+            bases.Add(repoRoot);
+
+        if (!string.IsNullOrWhiteSpace(Environment.CurrentDirectory))
+            bases.Add(Environment.CurrentDirectory);
+
+        if (!string.IsNullOrWhiteSpace(AppContext.BaseDirectory))
+            bases.Add(AppContext.BaseDirectory);
+
+        foreach (var baseDir in bases.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var candidate = Path.GetFullPath(Path.Combine(baseDir, outputDirectorySetting));
+            if (Directory.Exists(candidate))
+            {
+                relativeBaseUsed = baseDir;
+                return candidate;
+            }
+        }
+
+        // Fallback to first base (repo root if found), otherwise executable directory.
+        var fallbackBase = bases.FirstOrDefault() ?? AppContext.BaseDirectory;
+        relativeBaseUsed = fallbackBase;
+        return Path.GetFullPath(Path.Combine(fallbackBase, outputDirectorySetting));
+    }
+
+    private static string? FindRepoRoot(string startDir)
+    {
+        if (string.IsNullOrWhiteSpace(startDir))
+            return null;
+
+        var dir = new DirectoryInfo(startDir);
+        while (dir is not null)
+        {
+            var slnPath = Path.Combine(dir.FullName, "LeniTool.sln");
+            var gitPath = Path.Combine(dir.FullName, ".git");
+            if (File.Exists(slnPath) || Directory.Exists(gitPath))
+                return dir.FullName;
+
+            dir = dir.Parent;
+        }
+
+        return null;
     }
 
     private async Task AnalyzeSelectedFileAsync()
@@ -482,37 +555,7 @@ public class MainViewModel : ReactiveObject
         await AnalyzeFileAsync(SelectedFile);
     }
 
-    private async Task SaveSelectedFileOverrideAsync()
-    {
-        if (SelectedFile is null)
-            return;
 
-        var key = SafeGetFullPath(SelectedFile.FilePath);
-        Configuration.FileOverrides ??= new Dictionary<string, SplitConfigurationOverrides>(StringComparer.OrdinalIgnoreCase);
-        Configuration.FileOverrides[key] = SelectedFile.ToOverrides();
-
-        await _configService.SaveConfigurationAsync(Configuration);
-        AddLog($"Saved override for file: {SelectedFile.FileName}");
-    }
-
-    private async Task SaveSelectedExtensionOverrideAsync()
-    {
-        if (SelectedFile is null)
-            return;
-
-        var ext = (Path.GetExtension(SelectedFile.FilePath) ?? string.Empty).ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(ext))
-        {
-            AddLog("Unable to determine file extension");
-            return;
-        }
-
-        Configuration.ExtensionProfiles ??= new Dictionary<string, SplitConfigurationOverrides>(StringComparer.OrdinalIgnoreCase);
-        Configuration.ExtensionProfiles[ext] = SelectedFile.ToOverrides();
-
-        await _configService.SaveConfigurationAsync(Configuration);
-        AddLog($"Saved override as default for {ext}");
-    }
 
     private void ApplyRunOverridesFromUi()
     {
@@ -630,10 +673,12 @@ public class FileItemViewModel : ReactiveObject
     private AnalysisResult? _analysis;
     private bool _isAnalyzing;
     private bool _isRejected;
+    private bool _isProcessed;
     private double _overrideMaxChunkSizeMb = 4.5;
     private bool? _overrideAutoDetectRecordTag = true;
     private string _overrideRecordTagName = string.Empty;
     private string _overrideNamingPattern = string.Empty;
+    private ObservableCollection<string> _processedOutputFiles = new();
 
     public string FileName { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
@@ -644,6 +689,20 @@ public class FileItemViewModel : ReactiveObject
         set
         {
             this.RaiseAndSetIfChanged(ref _isRejected, value);
+            this.RaisePropertyChanged(nameof(StatusBadgeText));
+            this.RaisePropertyChanged(nameof(StatusBadgeClasses));
+            this.RaisePropertyChanged(nameof(StatusBadgeBackground));
+            this.RaisePropertyChanged(nameof(StatusBadgeForeground));
+        }
+    }
+
+    public bool IsProcessed
+    {
+        get => _isProcessed;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isProcessed, value);
+            this.RaisePropertyChanged(nameof(HasProcessedOutputs));
             this.RaisePropertyChanged(nameof(StatusBadgeText));
             this.RaisePropertyChanged(nameof(StatusBadgeClasses));
             this.RaisePropertyChanged(nameof(StatusBadgeBackground));
@@ -695,6 +754,11 @@ public class FileItemViewModel : ReactiveObject
             this.RaisePropertyChanged(nameof(FileSizeShortDisplay));
             this.RaisePropertyChanged(nameof(EncodingDisplay));
             this.RaisePropertyChanged(nameof(CandidateRecords));
+            this.RaisePropertyChanged(nameof(TagSummaries));
+            this.RaisePropertyChanged(nameof(HasTagSummaries));
+            this.RaisePropertyChanged(nameof(AnalysisIssues));
+            this.RaisePropertyChanged(nameof(HasAnalysisIssues));
+            this.RaisePropertyChanged(nameof(AnalysisStatusText));
             this.RaisePropertyChanged(nameof(EstimatedPartCount));
             this.RaisePropertyChanged(nameof(TopCandidateDisplay));
             this.RaisePropertyChanged(nameof(StatusBadgeText));
@@ -707,6 +771,25 @@ public class FileItemViewModel : ReactiveObject
     public bool IsAnalyzed => Analysis is not null;
 
     public IReadOnlyList<CandidateRecord> CandidateRecords => (IReadOnlyList<CandidateRecord>?)Analysis?.CandidateRecords ?? Array.Empty<CandidateRecord>();
+
+    public IReadOnlyList<TagSummary> TagSummaries => (IReadOnlyList<TagSummary>?)Analysis?.TagSummaries ?? Array.Empty<TagSummary>();
+
+    public bool HasTagSummaries => TagSummaries.Count > 0;
+
+    public IReadOnlyList<string> AnalysisIssues => BuildAnalysisIssues();
+
+    public bool HasAnalysisIssues => AnalysisIssues.Count > 0;
+
+    public string AnalysisStatusText
+    {
+        get
+        {
+            if (Analysis is null)
+                return "Not analyzed";
+
+            return HasAnalysisIssues ? "Issues detected" : "OK";
+        }
+    }
 
     public long FileSizeBytes
     {
@@ -811,6 +894,18 @@ public class FileItemViewModel : ReactiveObject
 
     public bool IsManualRecordTag => !(OverrideAutoDetectRecordTag ?? true);
 
+    public ObservableCollection<string> ProcessedOutputFiles
+    {
+        get => _processedOutputFiles;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _processedOutputFiles, value);
+            this.RaisePropertyChanged(nameof(HasProcessedOutputs));
+        }
+    }
+
+    public bool HasProcessedOutputs => ProcessedOutputFiles.Count > 0;
+
     public int EstimatedPartCount
     {
         get
@@ -846,12 +941,54 @@ public class FileItemViewModel : ReactiveObject
         }
     }
 
+    private IReadOnlyList<string> BuildAnalysisIssues()
+    {
+        if (Analysis is null)
+            return Array.Empty<string>();
+
+        var issues = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(Analysis.EncodingName))
+            issues.Add("Encoding could not be detected.");
+
+        if (TagSummaries.Count == 0)
+            issues.Add("No tags detected. File may not be markup or is malformed.");
+
+        if (CandidateRecords.Count == 0)
+            issues.Add("No repeating record tag detected. Auto-split may not work.");
+
+        if (CandidateRecords.Count > 0 && Analysis.WrapperRange is null)
+            issues.Add("Could not determine wrapper boundaries for records.");
+
+        if (CandidateRecords.Count > 0 && Analysis.Confidence < 0.4)
+            issues.Add($"Low confidence record tag detection ({Analysis.Confidence:P0}).");
+
+        var top = CandidateRecords
+            .OrderByDescending(c => c.Confidence)
+            .FirstOrDefault();
+
+        if (top is not null)
+        {
+            var summary = TagSummaries.FirstOrDefault(s =>
+                string.Equals(s.TagName, top.TagName, StringComparison.OrdinalIgnoreCase));
+
+            if (summary is not null && summary.OpenCount != summary.CloseCount)
+            {
+                issues.Add($"Tag <{summary.TagName}> has mismatched open/close counts (open: {summary.OpenCount}, close: {summary.CloseCount}).");
+            }
+        }
+
+        return issues;
+    }
+
     public string StatusBadgeText
     {
         get
         {
             if (IsRejected)
                 return "Rejected";
+            if (IsProcessed)
+                return "Processed";
             if (IsAnalyzing)
                 return "Analyzing";
             if (Analysis is not null && CandidateRecords.Count > 0)
@@ -870,6 +1007,8 @@ public class FileItemViewModel : ReactiveObject
         {
             if (IsRejected)
                 return "badge danger";
+            if (IsProcessed)
+                return "badge success";
             if (IsAnalyzing)
                 return "badge warning";
             if (Analysis is not null)
@@ -884,6 +1023,8 @@ public class FileItemViewModel : ReactiveObject
         {
             if (IsRejected)
                 return BadgeDangerBgBrush;
+            if (IsProcessed)
+                return BadgeSuccessBgBrush;
             if (IsAnalyzing)
                 return BadgeWarningBgBrush;
             if (IsAnalyzed)
@@ -898,6 +1039,8 @@ public class FileItemViewModel : ReactiveObject
         {
             if (IsRejected)
                 return BadgeDangerFgBrush;
+            if (IsProcessed)
+                return BadgeSuccessFgBrush;
             if (IsAnalyzing)
                 return BadgeWarningFgBrush;
             if (IsAnalyzed)
@@ -925,5 +1068,16 @@ public class FileItemViewModel : ReactiveObject
             AutoDetectRecordTag = autoDetectRecordTag,
             RecordTagName = autoDetectRecordTag ? null : (OverrideRecordTagName ?? string.Empty).Trim()
         };
+    }
+
+    public void SetProcessedOutputs(IEnumerable<string> outputFiles)
+    {
+        ProcessedOutputFiles.Clear();
+        foreach (var file in outputFiles)
+        {
+            if (!string.IsNullOrWhiteSpace(file))
+                ProcessedOutputFiles.Add(file);
+        }
+        this.RaisePropertyChanged(nameof(HasProcessedOutputs));
     }
 }

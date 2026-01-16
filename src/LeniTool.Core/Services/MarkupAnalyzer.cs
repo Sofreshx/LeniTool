@@ -42,6 +42,18 @@ public sealed class MarkupAnalyzer
             : null;
 
         var stats = await ScanAsync(filePath, encoding, bomLength, tagNamesToTrack, cancellationToken).ConfigureAwait(false);
+        var tagSummaries = stats
+            .Select(kvp => new TagSummary
+            {
+                TagName = kvp.Key,
+                OpenCount = kvp.Value.OpenCount,
+                CloseCount = kvp.Value.CloseCount
+            })
+            .OrderByDescending(s => s.TotalCount)
+            .ThenBy(s => s.TagName, StringComparer.Ordinal)
+            .Take(25)
+            .ToList();
+
         var candidates = ComputeCandidates(stats, fileSize, maxCandidates);
 
         WrapperRange? wrapper = null;
@@ -77,7 +89,8 @@ public sealed class MarkupAnalyzer
             CandidateRecords = candidates,
             WrapperRange = wrapper,
             Confidence = confidence,
-            EstimatedPartCount = estimatedParts
+            EstimatedPartCount = estimatedParts,
+            TagSummaries = tagSummaries
         };
     }
 

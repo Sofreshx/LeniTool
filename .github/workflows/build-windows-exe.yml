@@ -1,0 +1,59 @@
+name: Build Windows executable
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore src/LeniTool.Desktop/LeniTool.Desktop.csproj
+
+      - name: Publish (self-contained single-file)
+        run: >-
+          dotnet publish src/LeniTool.Desktop/LeniTool.Desktop.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          /p:PublishSingleFile=true
+          /p:IncludeNativeLibrariesForSelfExtract=true
+          /p:PublishTrimmed=false
+          /p:DebugType=None
+
+      - name: Zip artifact
+        shell: pwsh
+        run: |
+          $publishDir = "src/LeniTool.Desktop/bin/Release/net8.0-windows/win-x64/publish"
+          $artifactName = "LeniTool-win-x64"
+          Compress-Archive -Path "$publishDir\*" -DestinationPath "$artifactName.zip" -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LeniTool-win-x64
+          path: LeniTool-win-x64.zip
+
+      - name: Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly (Windows)
+          prerelease: true
+          target_commitish: ${{ github.sha }}
+          files: LeniTool-win-x64.zip
