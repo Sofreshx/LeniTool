@@ -112,3 +112,6 @@ output/
 # Temporary files
 *.tmp
 *.temp
+
+# Examples
+Example/
