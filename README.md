@@ -1,4 +1,4 @@
-﻿# LeniTool — Simple, focused README (condensed)
+﻿# LeniTool
 
 LeniTool is a small Windows desktop utility (Avalonia) for splitting large HTML or tagged TXT files into valid, size-limited chunks while preserving structure.
 
@@ -40,7 +40,3 @@ Published exe: `src/LeniTool.Desktop/bin/Release/.../publish/`
 Open an issue on GitHub if you hit a bug or want a feature.
 
 ---
-
-This README consolidates the project’s essential usage and replaces separate long-form docs (QUICKSTART.md, BUILD.md, CLI_USAGE.md, PROJECT_SUMMARY.md, QUALITY_REVIEW.md).
-
-Maintainers: keep this file short — move long how-tos into `docs/` if required.
