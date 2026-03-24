@@ -160,7 +160,7 @@ public sealed class MarkupAnalyzer
             .OrderByDescending(kvp => kvp.Value.OpenCount + kvp.Value.CloseCount)
             .Take(12)
             .Select(kvp => kvp.Key)
-            .ToHashSet(StringComparer.Ordinal);
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static async Task<Dictionary<string, TagStats>> ScanAsync(
@@ -188,7 +188,7 @@ public sealed class MarkupAnalyzer
         if (isUtf16 && (carryBytes % 2 != 0))
             carryBytes++;
 
-        var stats = new Dictionary<string, TagStats>(StringComparer.Ordinal);
+        var stats = new Dictionary<string, TagStats>(StringComparer.OrdinalIgnoreCase);
         long totalReadAfterBom = 0;
 
         try

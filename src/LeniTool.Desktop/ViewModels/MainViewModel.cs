@@ -20,7 +20,7 @@ public class MainViewModel : ReactiveObject
     private readonly ConfigurationService _configService;
     private SplitConfiguration _configuration;
     private bool _isBusy;
-    private bool _isConfigExpanded = false;
+    private bool _isSettingsOpen;
     private bool _isLogExpanded = false;
     private string _statusText = "Ready";
     private FileItemViewModel? _selectedFile;
@@ -38,7 +38,8 @@ public class MainViewModel : ReactiveObject
         SaveConfigCommand = ReactiveCommand.CreateFromTask(SaveConfigurationAsync);
         ClearFilesCommand = ReactiveCommand.Create(() => Files.Clear());
         ProcessFilesCommand = ReactiveCommand.CreateFromTask(async () => await ProcessFilesAsync());
-        ToggleConfigCommand = ReactiveCommand.Create(() => { IsConfigExpanded = !IsConfigExpanded; });
+        OpenSettingsCommand = ReactiveCommand.Create(() => { IsSettingsOpen = true; });
+        CloseSettingsCommand = ReactiveCommand.Create(() => { IsSettingsOpen = false; });
         ToggleLogCommand = ReactiveCommand.Create(() => { IsLogExpanded = !IsLogExpanded; });
 
         OpenOutputFolderCommand = ReactiveCommand.Create(OpenOutputFolder);
@@ -127,14 +128,14 @@ public class MainViewModel : ReactiveObject
         }
     }
 
-    public double MaxInputFileSizeGB
+    public double MaxInputFileSizeMB
     {
-        get => Configuration.MaxInputFileSize / 1024d;
+        get => Configuration.MaxInputFileSize;
         set
         {
-            Configuration.MaxInputFileSize = Math.Max(0, value) * 1024d;
+            Configuration.MaxInputFileSize = Math.Max(0, value);
             this.RaisePropertyChanged();
-            this.RaisePropertyChanged(nameof(MaxInputFileSizeGB));
+            this.RaisePropertyChanged(nameof(MaxInputFileSizeMB));
         }
     }
 
@@ -149,16 +150,46 @@ public class MainViewModel : ReactiveObject
         }
     }
 
+    public bool TxtDefaultsAutoDetectRecordTag
+    {
+        get => GetExtensionProfile(".txt")?.AutoDetectRecordTag ?? true;
+        set
+        {
+            var profile = GetOrCreateExtensionProfile(".txt");
+            profile.AutoDetectRecordTag = value;
+            if (value)
+                profile.RecordTagName = null;
+
+            this.RaisePropertyChanged();
+            this.RaisePropertyChanged(nameof(IsTxtDefaultsManualRecordTag));
+            this.RaisePropertyChanged(nameof(TxtDefaultsRecordTagName));
+        }
+    }
+
+    public string TxtDefaultsRecordTagName
+    {
+        get => GetExtensionProfile(".txt")?.RecordTagName ?? string.Empty;
+        set
+        {
+            var profile = GetOrCreateExtensionProfile(".txt");
+            var trimmed = (value ?? string.Empty).Trim();
+            profile.RecordTagName = string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+            this.RaisePropertyChanged();
+        }
+    }
+
+    public bool IsTxtDefaultsManualRecordTag => !TxtDefaultsAutoDetectRecordTag;
+
     public bool IsBusy
     {
         get => _isBusy;
         set => this.RaiseAndSetIfChanged(ref _isBusy, value);
     }
 
-    public bool IsConfigExpanded
+    public bool IsSettingsOpen
     {
-        get => _isConfigExpanded;
-        set => this.RaiseAndSetIfChanged(ref _isConfigExpanded, value);
+        get => _isSettingsOpen;
+        set => this.RaiseAndSetIfChanged(ref _isSettingsOpen, value);
     }
 
     public bool IsLogExpanded
@@ -210,7 +241,8 @@ public class MainViewModel : ReactiveObject
     public ReactiveCommand<Unit, Unit> SaveConfigCommand { get; }
     public ReactiveCommand<Unit, Unit> ClearFilesCommand { get; }
     public ReactiveCommand<Unit, Unit> ProcessFilesCommand { get; }
-    public ReactiveCommand<Unit, Unit> ToggleConfigCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenSettingsCommand { get; }
+    public ReactiveCommand<Unit, Unit> CloseSettingsCommand { get; }
     public ReactiveCommand<Unit, Unit> ToggleLogCommand { get; }
 
     public ReactiveCommand<Unit, Unit> OpenOutputFolderCommand { get; }
@@ -233,8 +265,11 @@ public class MainViewModel : ReactiveObject
             this.RaisePropertyChanged(nameof(NamingPattern));
             this.RaisePropertyChanged(nameof(OutputDirectory));
             this.RaisePropertyChanged(nameof(MaxParallelFiles));
-            this.RaisePropertyChanged(nameof(MaxInputFileSizeGB));
+            this.RaisePropertyChanged(nameof(MaxInputFileSizeMB));
             this.RaisePropertyChanged(nameof(AutoAnalyzeThresholdMB));
+            this.RaisePropertyChanged(nameof(TxtDefaultsAutoDetectRecordTag));
+            this.RaisePropertyChanged(nameof(TxtDefaultsRecordTagName));
+            this.RaisePropertyChanged(nameof(IsTxtDefaultsManualRecordTag));
             AddLog("Configuration loaded successfully");
 
             // Refresh effective defaults for already-added files.
@@ -267,6 +302,40 @@ public class MainViewModel : ReactiveObject
     }
 
     public void AddLogPublic(string message) => AddLog(message);
+
+    private SplitConfigurationOverrides? GetExtensionProfile(string extensionKey)
+    {
+        if (Configuration.ExtensionProfiles is null)
+            return null;
+
+        if (Configuration.ExtensionProfiles.TryGetValue(extensionKey, out var profile))
+            return profile;
+
+        var alternateKey = extensionKey.TrimStart('.');
+        return Configuration.ExtensionProfiles.TryGetValue(alternateKey, out var alternateProfile)
+            ? alternateProfile
+            : null;
+    }
+
+    private SplitConfigurationOverrides GetOrCreateExtensionProfile(string extensionKey)
+    {
+        Configuration.ExtensionProfiles ??= new Dictionary<string, SplitConfigurationOverrides>(StringComparer.OrdinalIgnoreCase);
+
+        if (Configuration.ExtensionProfiles.TryGetValue(extensionKey, out var profile))
+            return profile;
+
+        var alternateKey = extensionKey.TrimStart('.');
+        if (Configuration.ExtensionProfiles.TryGetValue(alternateKey, out var alternateProfile))
+        {
+            Configuration.ExtensionProfiles.Remove(alternateKey);
+            Configuration.ExtensionProfiles[extensionKey] = alternateProfile;
+            return alternateProfile;
+        }
+
+        var createdProfile = new SplitConfigurationOverrides();
+        Configuration.ExtensionProfiles[extensionKey] = createdProfile;
+        return createdProfile;
+    }
 
     public async Task AddFilesFromPathsAsync(IEnumerable<string> filePaths)
     {

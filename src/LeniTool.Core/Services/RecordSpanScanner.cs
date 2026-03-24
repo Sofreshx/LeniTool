@@ -131,8 +131,8 @@ public sealed class RecordSpanScanner
 
         public KmpMatcher(byte[] pattern)
         {
-            _pattern = pattern;
-            _lps = BuildLps(pattern);
+            _pattern = NormalizePattern(pattern);
+            _lps = BuildLps(_pattern);
             _j = 0;
         }
 
@@ -140,10 +140,12 @@ public sealed class RecordSpanScanner
 
         public bool Step(byte b)
         {
-            while (_j > 0 && b != _pattern[_j])
+            var normalized = NormalizeAsciiByte(b);
+
+            while (_j > 0 && normalized != _pattern[_j])
                 _j = _lps[_j - 1];
 
-            if (b == _pattern[_j])
+            if (normalized == _pattern[_j])
                 _j++;
 
             if (_j == _pattern.Length)
@@ -154,6 +156,20 @@ public sealed class RecordSpanScanner
 
             return false;
         }
+
+        private static byte[] NormalizePattern(byte[] pattern)
+        {
+            var normalized = new byte[pattern.Length];
+            for (var i = 0; i < pattern.Length; i++)
+                normalized[i] = NormalizeAsciiByte(pattern[i]);
+
+            return normalized;
+        }
+
+        private static byte NormalizeAsciiByte(byte value)
+            => value is >= (byte)'A' and <= (byte)'Z'
+                ? (byte)(value + 32)
+                : value;
 
         private static int[] BuildLps(byte[] pattern)
         {

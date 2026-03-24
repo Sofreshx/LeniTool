@@ -88,6 +88,7 @@ public sealed class SplitConfigurationResolutionTests
 
             loaded.ShouldNotBeNull();
             loaded.MaxChunkSizeMB.ShouldBe(12.5);
+            loaded.MaxInputFileSize.ShouldBe(512);
             loaded.SegmentationTags.ShouldBe(new[] { "<div" });
             loaded.OutputDirectory.ShouldBe("out");
 

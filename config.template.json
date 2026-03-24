@@ -1,6 +1,6 @@
 {
   "maxChunkSizeMB": 4.5,
-  "maxInputFileSize": 5120,
+  "maxInputFileSize": 512,
   "autoAnalyzeThreshold": 100,
   "segmentationTags": [
     "<section",

@@ -88,4 +88,43 @@ public sealed class MarkupAnalyzerTests
                 Directory.Delete(tempDir, true);
         }
     }
+
+    [Fact]
+    public async Task AnalyzeAsync_TreatsMixedCaseOpenCloseTagsAsSameRecordTag_AndIgnoresNoise()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "LeniToolTests", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        var filePath = Path.Combine(tempDir, "input-mixed-case.txt");
+
+        var content = "<Root>\n" +
+                      "<debut fichier>\n" +
+                      "<1>noise</1>\n" +
+                      "  <Test>Alpha</test>\n" +
+                      "  <test>Beta</Test>\n" +
+                      "  <TEST>Gamma</TeSt>\n" +
+                      "<2>noise</2>\n" +
+                      "</Root>\n";
+
+        await File.WriteAllTextAsync(filePath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        try
+        {
+            var analyzer = new MarkupAnalyzer();
+            var result = await analyzer.AnalyzeAsync(filePath, targetMaxChunkBytes: 10);
+
+            result.CandidateRecords.ShouldNotBeEmpty();
+
+            var best = result.CandidateRecords[0];
+            best.TagName.Equals("Test", StringComparison.OrdinalIgnoreCase).ShouldBeTrue();
+            best.CountEstimate.ShouldBe(3);
+
+            result.TagSummaries.Any(t => t.TagName == "1").ShouldBeFalse();
+            result.CandidateRecords.Any(c => c.TagName.Equals("debut", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
+    }
 }

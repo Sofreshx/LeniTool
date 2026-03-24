@@ -28,6 +28,7 @@ public class ConfigurationServiceTests
         // Assert
         config.ShouldNotBeNull();
         config.MaxChunkSizeMB.ShouldBe(4.5);
+        config.MaxInputFileSize.ShouldBe(512);
         config.SegmentationTags.ShouldNotBeEmpty();
         File.Exists(service.GetConfigFilePath()).ShouldBeTrue();
     }
@@ -345,7 +346,56 @@ public sealed class TxtMarkupSplitterServiceTests
         }
     }
 
-    private static int CountOccurrences(string text, string needle)
+    [Fact]
+    public async Task SplitFile_SplitsMixedCaseRecordTags_WithoutTreatingNoiseAsRecords()
+    {
+        var testDir = Path.Combine(Path.GetTempPath(), "LeniToolTests", Guid.NewGuid().ToString());
+        Directory.CreateDirectory(testDir);
+        var inputFile = Path.Combine(testDir, "input-mixed-case.txt");
+        var outputDir = Path.Combine(testDir, "out");
+
+        var records = string.Join("", Enumerable.Range(1, 12)
+            .Select(i => (i % 3) switch
+            {
+                0 => $"  <TEST>Record {i}</TeSt>\n",
+                1 => $"  <Test>Record {i}</test>\n",
+                _ => $"  <test>Record {i}</Test>\n"
+            }));
+
+        var content = "<Root>\n" +
+                      "<debut fichier>\n" +
+                      "<1>noise</1>\n" +
+                      records +
+                      "<2>noise</2>\n" +
+                      "</Root>\n";
+
+        await File.WriteAllTextAsync(inputFile, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var config = new SplitConfiguration { MaxChunkSizeMB = 0.0002 };
+        var service = new TxtMarkupSplitterService(config);
+
+        try
+        {
+            var outputs = await service.SplitFileAsync(inputFile, outputDir);
+
+            outputs.Count.ShouldBeGreaterThan(1);
+            foreach (var file in outputs)
+            {
+                var text = await File.ReadAllTextAsync(file, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                text.ShouldContain("<Root>");
+                text.ShouldContain("</Root>");
+                CountOccurrences(text, "<test", StringComparison.OrdinalIgnoreCase)
+                    .ShouldBe(CountOccurrences(text, "</test>", StringComparison.OrdinalIgnoreCase));
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(testDir))
+                Directory.Delete(testDir, true);
+        }
+    }
+
+    private static int CountOccurrences(string text, string needle, StringComparison comparison = StringComparison.Ordinal)
     {
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(needle))
             return 0;
@@ -354,7 +404,7 @@ public sealed class TxtMarkupSplitterServiceTests
         var idx = 0;
         while (true)
         {
-            idx = text.IndexOf(needle, idx, StringComparison.Ordinal);
+            idx = text.IndexOf(needle, idx, comparison);
             if (idx < 0)
                 break;
             count++;

@@ -16,7 +16,7 @@ public class SplitConfiguration
     /// Hard maximum allowed input file size in megabytes.
     /// When set to 0, the limit is treated as disabled.
     /// </summary>
-    public double MaxInputFileSize { get; set; } = 5 * 1024;
+    public double MaxInputFileSize { get; set; } = 512;
 
     /// <summary>
     /// Auto-analyze threshold in megabytes.
