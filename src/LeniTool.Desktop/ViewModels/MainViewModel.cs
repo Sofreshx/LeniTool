@@ -34,15 +34,21 @@ public class MainViewModel : ReactiveObject
         Files = new ObservableCollection<FileItemViewModel>();
         LogEntries = new ObservableCollection<string>();
 
+        var canRemoveTrackedItems = this.WhenAnyValue(x => x.IsBusy)
+            .Select(isBusy => !isBusy);
+
         LoadConfigCommand = ReactiveCommand.CreateFromTask(LoadConfigurationAsync);
         SaveConfigCommand = ReactiveCommand.CreateFromTask(SaveConfigurationAsync);
-        ClearFilesCommand = ReactiveCommand.Create(() => Files.Clear());
+        ClearFilesCommand = ReactiveCommand.Create(ClearFiles, canRemoveTrackedItems);
         ProcessFilesCommand = ReactiveCommand.CreateFromTask(async () => await ProcessFilesAsync());
         OpenSettingsCommand = ReactiveCommand.Create(() => { IsSettingsOpen = true; });
         CloseSettingsCommand = ReactiveCommand.Create(() => { IsSettingsOpen = false; });
         ToggleLogCommand = ReactiveCommand.Create(() => { IsLogExpanded = !IsLogExpanded; });
 
         OpenOutputFolderCommand = ReactiveCommand.Create(OpenOutputFolder);
+        RemoveFileCommand = ReactiveCommand.Create<FileItemViewModel?>(RemoveFileFromQueue, canRemoveTrackedItems);
+        RemoveProcessedOutputCommand = ReactiveCommand.Create<ProcessedOutputItemViewModel?>(RemoveProcessedOutput, canRemoveTrackedItems);
+        RemoveProcessedOutputsForFileCommand = ReactiveCommand.Create<FileItemViewModel?>(RemoveProcessedOutputsForFile, canRemoveTrackedItems);
 
         var hasSelection = this.WhenAnyValue(x => x.SelectedFile).Select(f => f is not null);
         AnalyzeSelectedFileCommand = ReactiveCommand.CreateFromTask(AnalyzeSelectedFileAsync, hasSelection);
@@ -246,6 +252,9 @@ public class MainViewModel : ReactiveObject
     public ReactiveCommand<Unit, Unit> ToggleLogCommand { get; }
 
     public ReactiveCommand<Unit, Unit> OpenOutputFolderCommand { get; }
+    public ReactiveCommand<FileItemViewModel?, Unit> RemoveFileCommand { get; }
+    public ReactiveCommand<ProcessedOutputItemViewModel?, Unit> RemoveProcessedOutputCommand { get; }
+    public ReactiveCommand<FileItemViewModel?, Unit> RemoveProcessedOutputsForFileCommand { get; }
 
     public ReactiveCommand<Unit, Unit> AnalyzeSelectedFileCommand { get; }
 
@@ -406,6 +415,121 @@ public class MainViewModel : ReactiveObject
             AddLog($"Added {addedCount} file(s)");
     }
 
+    private void ClearFiles()
+    {
+        var filesWithTrackedOutputs = Files
+            .Where(file => file.HasProcessedOutputs)
+            .ToList();
+
+        if (filesWithTrackedOutputs.Count > 0)
+        {
+            var trackedOutputCount = filesWithTrackedOutputs.Sum(file => file.ProcessedOutputFiles.Count);
+            AddLog($"Cannot clear the file queue while {filesWithTrackedOutputs.Count} file(s) still have {trackedOutputCount} tracked generated output(s). Remove generated outputs first to preserve the rollback path.");
+            return;
+        }
+
+        Files.Clear();
+        SelectedFile = null;
+        StatusText = "Ready";
+        AddLog("Cleared file queue");
+    }
+
+    private void RemoveFileFromQueue(FileItemViewModel? file)
+    {
+        if (file is null)
+            return;
+
+        if (file.ProcessedOutputFiles.Count > 0)
+        {
+            AddLog($"Cannot remove {file.FileName} from the queue while {file.ProcessedOutputFiles.Count} generated output(s) are still tracked. Remove generated outputs first to preserve the rollback path.");
+            return;
+        }
+
+        var removedIndex = Files.IndexOf(file);
+        if (removedIndex < 0)
+            return;
+
+        var trackedOutputCount = file.ProcessedOutputFiles.Count;
+        var wasSelected = ReferenceEquals(SelectedFile, file);
+
+        Files.RemoveAt(removedIndex);
+
+        if (wasSelected)
+            SelectedFile = DetermineSelectionFallback(removedIndex);
+
+        if (Files.Count == 0)
+            StatusText = "Ready";
+
+        var outputSuffix = trackedOutputCount > 0
+            ? $" ({trackedOutputCount} generated output(s) still tracked on disk)"
+            : string.Empty;
+        AddLog($"Removed file from queue: {file.FileName}{outputSuffix}");
+    }
+
+    private void RemoveProcessedOutput(ProcessedOutputItemViewModel? outputItem)
+    {
+        if (outputItem is null)
+            return;
+
+        var file = FindFile(outputItem.SourceFilePath);
+        if (file is null)
+        {
+            AddLog($"Unable to remove generated output; source file is no longer in the queue: {outputItem.DisplayName}");
+            return;
+        }
+
+        var deletionOutcome = DeleteGeneratedOutputFile(outputItem);
+        AddLog(deletionOutcome.Message);
+
+        if (!deletionOutcome.CanRemoveReference)
+            return;
+
+        if (!file.RemoveProcessedOutput(outputItem.FullPath))
+        {
+            AddLog($"Generated output entry was already absent from {file.FileName}: {outputItem.DisplayName}");
+            return;
+        }
+
+        if (!file.HasProcessedOutputs)
+            AddLog($"Removed the last generated output for {file.FileName}; it can be processed again.");
+    }
+
+    private void RemoveProcessedOutputsForFile(FileItemViewModel? file)
+    {
+        if (file is null)
+            return;
+
+        var outputs = file.ProcessedOutputFiles.ToList();
+        if (outputs.Count == 0)
+        {
+            AddLog($"No generated outputs are tracked for {file.FileName}");
+            return;
+        }
+
+        var removedCount = 0;
+        var failureCount = 0;
+
+        foreach (var output in outputs)
+        {
+            var deletionOutcome = DeleteGeneratedOutputFile(output);
+            AddLog(deletionOutcome.Message);
+
+            if (!deletionOutcome.CanRemoveReference)
+            {
+                failureCount++;
+                continue;
+            }
+
+            if (file.RemoveProcessedOutput(output.FullPath))
+                removedCount++;
+        }
+
+        AddLog($"Generated output cleanup for {file.FileName}: removed {removedCount}, failed {failureCount}.");
+
+        if (removedCount > 0 && !file.HasProcessedOutputs)
+            AddLog($"Rollback complete for {file.FileName}; it can be processed again.");
+    }
+
     private async Task ProcessFilesAsync()
     {
         if (!Files.Any())
@@ -476,9 +600,7 @@ public class MainViewModel : ReactiveObject
                 {
                     if (result.Success)
                     {
-                        file.Status = "Processed";
                         file.Progress = 100;
-                        file.IsProcessed = true;
                         file.SetProcessedOutputs(result.OutputFiles);
                     }
                     else
@@ -624,6 +746,40 @@ public class MainViewModel : ReactiveObject
         await AnalyzeFileAsync(SelectedFile);
     }
 
+    private FileItemViewModel? DetermineSelectionFallback(int removedIndex)
+    {
+        if (Files.Count == 0)
+            return null;
+
+        if (removedIndex >= 0 && removedIndex < Files.Count)
+            return Files[removedIndex];
+
+        return Files[Files.Count - 1];
+    }
+
+    private FileItemViewModel? FindFile(string sourceFilePath)
+    {
+        var normalizedPath = SafeGetFullPath(sourceFilePath);
+        return Files.FirstOrDefault(file =>
+            string.Equals(SafeGetFullPath(file.FilePath), normalizedPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static (bool CanRemoveReference, string Message) DeleteGeneratedOutputFile(ProcessedOutputItemViewModel outputItem)
+    {
+        try
+        {
+            if (!File.Exists(outputItem.FullPath))
+                return (true, $"Generated output already missing: {outputItem.FullPath}");
+
+            File.Delete(outputItem.FullPath);
+            return (true, $"Deleted generated output: {outputItem.FullPath}");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Failed to delete generated output {outputItem.DisplayName}: {ex.Message}");
+        }
+    }
+
 
 
     private void ApplyRunOverridesFromUi()
@@ -747,7 +903,7 @@ public class FileItemViewModel : ReactiveObject
     private bool? _overrideAutoDetectRecordTag = true;
     private string _overrideRecordTagName = string.Empty;
     private string _overrideNamingPattern = string.Empty;
-    private ObservableCollection<string> _processedOutputFiles = new();
+    private ObservableCollection<ProcessedOutputItemViewModel> _processedOutputFiles = new();
 
     public string FileName { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
@@ -963,7 +1119,7 @@ public class FileItemViewModel : ReactiveObject
 
     public bool IsManualRecordTag => !(OverrideAutoDetectRecordTag ?? true);
 
-    public ObservableCollection<string> ProcessedOutputFiles
+    public ObservableCollection<ProcessedOutputItemViewModel> ProcessedOutputFiles
     {
         get => _processedOutputFiles;
         private set
@@ -1142,11 +1298,93 @@ public class FileItemViewModel : ReactiveObject
     public void SetProcessedOutputs(IEnumerable<string> outputFiles)
     {
         ProcessedOutputFiles.Clear();
+
+        var outputCount = 0;
         foreach (var file in outputFiles)
         {
             if (!string.IsNullOrWhiteSpace(file))
-                ProcessedOutputFiles.Add(file);
+            {
+                ProcessedOutputFiles.Add(new ProcessedOutputItemViewModel(FilePath, file));
+                outputCount++;
+            }
         }
+
+        IsProcessed = true;
+        Status = outputCount switch
+        {
+            0 => "Processed",
+            1 => "Processed (1 output)",
+            _ => $"Processed ({outputCount} outputs)"
+        };
+
         this.RaisePropertyChanged(nameof(HasProcessedOutputs));
+    }
+
+    public bool RemoveProcessedOutput(string outputPath)
+    {
+        var normalizedPath = NormalizePath(outputPath);
+        var outputItem = ProcessedOutputFiles.FirstOrDefault(item =>
+            string.Equals(NormalizePath(item.FullPath), normalizedPath, StringComparison.OrdinalIgnoreCase));
+
+        if (outputItem is null)
+            return false;
+
+        var removed = ProcessedOutputFiles.Remove(outputItem);
+        if (!removed)
+            return false;
+
+        this.RaisePropertyChanged(nameof(HasProcessedOutputs));
+
+        if (ProcessedOutputFiles.Count == 0)
+        {
+            IsProcessed = false;
+            Status = "Ready to process";
+        }
+        else
+        {
+            Status = ProcessedOutputFiles.Count == 1
+                ? "Processed (1 output)"
+                : $"Processed ({ProcessedOutputFiles.Count} outputs)";
+        }
+
+        return true;
+    }
+
+    private static string NormalizePath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
+        }
+    }
+}
+
+public sealed class ProcessedOutputItemViewModel
+{
+    public ProcessedOutputItemViewModel(string sourceFilePath, string fullPath)
+    {
+        SourceFilePath = NormalizePath(sourceFilePath);
+        FullPath = NormalizePath(fullPath);
+    }
+
+    public string SourceFilePath { get; }
+    public string FullPath { get; }
+    public string DisplayName => Path.GetFileName(FullPath);
+    public string DirectoryPath => Path.GetDirectoryName(FullPath) ?? string.Empty;
+
+    private static string NormalizePath(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path;
+        }
     }
 }

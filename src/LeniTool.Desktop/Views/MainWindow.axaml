@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
         x:Class="LeniTool.Desktop.Views.MainWindow"
+        x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
         Title="LeniTool"
         Width="900" Height="700">
@@ -40,7 +41,7 @@
                     <!-- Files -->
                     <Border Classes="card" Grid.Column="0">
                         <StackPanel Spacing="10">
-                            <TextBlock Text="📁 Files" Classes="h2" />
+                            <TextBlock Text="Files" Classes="h2" />
                             <TextBlock Text="Tip: Drag files anywhere in the window" Classes="subtle" FontSize="12" />
 
                             <Border Classes="listHeader">
@@ -58,13 +59,29 @@
                                      Classes="filesList"
                                      Height="260">
                                 <ListBox.ItemTemplate>
-                                    <DataTemplate>
+                                    <DataTemplate x:DataType="vm:FileItemViewModel">
                                         <Grid ColumnDefinitions="3*,110,90,140">
-                                            <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Grid.Column="1" Text="{Binding FileSizeShortDisplay}" Classes="muted" Margin="10,0,0,0" />
-                                            <TextBlock Grid.Column="2" Text="{Binding EstimatedPartCount}" Classes="muted" Margin="10,0,0,0" />
+                                            <Grid.ContextMenu>
+                                                <ContextMenu DataContext="{Binding #RootWindow.DataContext}"
+                                                             x:DataType="vm:MainViewModel">
+                                                    <MenuItem Header="Remove file from queue"
+                                                              Command="{Binding RemoveFileCommand}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                    <MenuItem Header="Remove generated outputs"
+                                                              Command="{Binding RemoveProcessedOutputsForFileCommand}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding FilePath}" Classes="subtle" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding FileSizeShortDisplay}" Classes="muted" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="{Binding EstimatedPartCount}" Classes="muted" Margin="10,0,0,0" VerticalAlignment="Center" />
                                             <Border Grid.Column="3" Classes="badge" HorizontalAlignment="Left" Margin="10,0,0,0"
-                                                    Background="{Binding StatusBadgeBackground}">
+                                                    Background="{Binding StatusBadgeBackground}"
+                                                    VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding StatusBadgeText}" Foreground="{Binding StatusBadgeForeground}" />
                                             </Border>
                                         </Grid>
@@ -147,8 +164,26 @@
                                     <ItemsControl ItemsSource="{Binding SelectedFile.ProcessedOutputFiles}"
                                                   IsVisible="{Binding SelectedFile.HasProcessedOutputs}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding}" FontSize="11" Classes="subtle" TextWrapping="Wrap"/>
+                                            <DataTemplate x:DataType="vm:ProcessedOutputItemViewModel">
+                                                <Border Classes="outputItem"
+                                                        ToolTip.Tip="{Binding FullPath}">
+                                                    <Border.ContextMenu>
+                                                        <ContextMenu DataContext="{Binding #RootWindow.DataContext}"
+                                                                     x:DataType="vm:MainViewModel">
+                                                            <MenuItem Header="Remove output file"
+                                                                      Command="{Binding RemoveProcessedOutputCommand}"
+                                                                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                        </ContextMenu>
+                                                    </Border.ContextMenu>
+
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <StackPanel Spacing="2">
+                                                            <TextBlock Text="{Binding DisplayName}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding DirectoryPath}" FontSize="10" Classes="subtle" TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text="Right-click" FontSize="10" Classes="subtle" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                                    </Grid>
+                                                </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -191,7 +226,7 @@
             <Border Classes="card" Grid.Row="2">
                 <StackPanel Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                        <TextBlock Text="📊 Status &amp; Log" Classes="h2" />
+                        <TextBlock Text="Status &amp; Log" Classes="h2" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                             <TextBlock Text="{Binding StatusText}" Classes="subtle" VerticalAlignment="Center" />
                             <Button Content="Hide Log"
@@ -205,7 +240,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <ListBox ItemsSource="{Binding LogEntries}" Height="180" IsVisible="{Binding IsLogExpanded}">
+                    <ListBox ItemsSource="{Binding LogEntries}" Height="180" IsVisible="{Binding IsLogExpanded}" Classes="logList">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" FontSize="11" FontFamily="Consolas"/>
