@@ -27,11 +27,12 @@ public partial class MainWindow : Window
         _dropOverlayBox = this.FindControl<Border>("DropOverlayBox");
         _dropOverlayTitle = this.FindControl<TextBlock>("DropOverlayTitle");
         _dropOverlaySubtitle = this.FindControl<TextBlock>("DropOverlaySubtitle");
+        var dropHost = this.FindControl<Control>("RootDropHost") ?? this;
 
-        AddHandler(DragDrop.DragEnterEvent, OnWindowDragEnter, RoutingStrategies.Tunnel);
-        AddHandler(DragDrop.DragLeaveEvent, OnWindowDragLeave, RoutingStrategies.Tunnel);
-        AddHandler(DragDrop.DragOverEvent, OnWindowDragOver, RoutingStrategies.Tunnel);
-        AddHandler(DragDrop.DropEvent, OnWindowDrop, RoutingStrategies.Tunnel);
+        dropHost.AddHandler(DragDrop.DragEnterEvent, OnDropHostDragEnter, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
+        dropHost.AddHandler(DragDrop.DragLeaveEvent, OnDropHostDragLeave, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
+        dropHost.AddHandler(DragDrop.DragOverEvent, OnDropHostDragOver, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
+        dropHost.AddHandler(DragDrop.DropEvent, OnDropHostDrop, RoutingStrategies.Tunnel | RoutingStrategies.Bubble);
     }
 
     private async void OnAddFilesClicked(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -124,14 +125,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnWindowDragEnter(object? sender, DragEventArgs e)
+    private void OnDropHostDragEnter(object? sender, DragEventArgs e)
     {
         _dragDepth++;
         UpdateOverlayAndEffects(e, showOverlay: true);
         e.Handled = true;
     }
 
-    private void OnWindowDragLeave(object? sender, DragEventArgs e)
+    private void OnDropHostDragLeave(object? sender, DragEventArgs e)
     {
         _dragDepth = Math.Max(0, _dragDepth - 1);
         if (_dragDepth == 0)
@@ -140,14 +141,16 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnWindowDragOver(object? sender, DragEventArgs e)
+    private void OnDropHostDragOver(object? sender, DragEventArgs e)
     {
         UpdateOverlayAndEffects(e, showOverlay: true);
         e.Handled = true;
     }
 
-    private async void OnWindowDrop(object? sender, DragEventArgs e)
+    private async void OnDropHostDrop(object? sender, DragEventArgs e)
     {
+        e.Handled = true;
+
         try
         {
             if (DataContext is not MainViewModel vm)

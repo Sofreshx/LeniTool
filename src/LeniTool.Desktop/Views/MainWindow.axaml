@@ -7,10 +7,11 @@
         x:Class="LeniTool.Desktop.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="LeniTool"
-        DragDrop.AllowDrop="True"
         Width="900" Height="700">
 
-    <Grid>
+        <Grid x:Name="RootDropHost"
+                    Background="Transparent"
+                    DragDrop.AllowDrop="True">
 
         <Grid Margin="16" RowDefinitions="Auto,*,Auto">
 
@@ -40,7 +41,7 @@
                     <Border Classes="card" Grid.Column="0">
                         <StackPanel Spacing="10">
                             <TextBlock Text="📁 Files" Classes="h2" />
-                            <TextBlock Text="Tip: Drag files onto the list" Classes="subtle" FontSize="12" />
+                            <TextBlock Text="Tip: Drag files anywhere in the window" Classes="subtle" FontSize="12" />
 
                             <Border Classes="listHeader">
                                 <Grid ColumnDefinitions="3*,110,90,140">
@@ -54,7 +55,6 @@
                             <ListBox ItemsSource="{Binding Files}"
                                      x:Name="FilesList"
                                      SelectedItem="{Binding SelectedFile}"
-                                     DragDrop.AllowDrop="True"
                                      Classes="filesList"
                                      Height="260">
                                 <ListBox.ItemTemplate>
